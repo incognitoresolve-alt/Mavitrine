@@ -107,6 +107,38 @@ déjà installé et configuré (`wrangler.jsonc`, `open-next.config.ts`).
 Le build a été vérifié : le Worker généré pèse environ 960 Kio compressés
 (gzip), bien sous la limite de 3 Mio du plan gratuit Cloudflare.
 
+### Déploiement automatique via le dashboard Cloudflare (Git)
+
+Si vous connectez le dépôt GitHub directement dans le dashboard Cloudflare
+(Workers & Pages → votre projet → Settings → Build), Cloudflare détecte un
+projet Next.js et propose par défaut :
+
+- Build command : `npm run build`
+- Deploy command : `npx wrangler deploy`
+
+Ces valeurs par défaut **ne suffisent pas** ici : `npm run build` ne fait
+que `next build` (il ne produit pas `.open-next/`, requis par
+`wrangler deploy`), ce qui provoque l'erreur
+`Could not find compiled Open Next config, did you run the build command?`.
+
+➡️ Dans les réglages du projet, changez la **Build command** pour :
+
+```
+npm run cf:build
+```
+
+(ou directement `npx opennextjs-cloudflare build`) et laissez la **Deploy
+command** telle quelle (`npx wrangler deploy`). Pensez aussi à renseigner
+`YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID` et
+`NEXT_PUBLIC_YOUTUBE_CHANNEL_URL` dans Settings → Variables and Secrets du
+projet (secrets pour la clé API, variables pour le reste).
+
+⚠️ Ne changez jamais le script `build` de `package.json` pour qu'il appelle
+`opennextjs-cloudflare build` : cet outil exécute lui-même `npm run build`
+en interne pour compiler Next.js, donc le rendre circulaire provoque une
+récursion infinie (le build ne termine jamais et consomme toute la
+mémoire).
+
 ### Autres hébergeurs
 
 Le projet reste une application Next.js standard, donc également
