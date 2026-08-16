@@ -3,6 +3,12 @@ import TrackCard from "@/components/TrackCard";
 import { siteConfig } from "@/lib/config";
 import { getChannelStats, getChannelUploads, getVideoStats } from "@/lib/youtube";
 
+// Rendu à chaque requête plutôt que figé au moment du build : les secrets
+// Cloudflare (YOUTUBE_API_KEY) ne sont garantis disponibles qu'à l'exécution
+// du Worker, pas pendant l'étape de build. Le cache reste assuré par les
+// `fetch` vers l'API YouTube (revalidate: 600 dans src/lib/youtube.ts).
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const uploads = await getChannelUploads();
   const [channelStats, videoStats] = await Promise.all([
