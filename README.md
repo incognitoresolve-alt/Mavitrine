@@ -36,11 +36,13 @@ YouTube et le nombre de vues.
 
 ## Configurer les statistiques YouTube (abonnés + vues)
 
+L'ID de chaîne et l'URL publique sont déjà codés en dur dans
+`src/lib/config.ts` (ce ne sont pas des secrets, ils sont visibles par
+n'importe qui sur YouTube). La **seule** chose à configurer est la clé API :
+
 1. Créez une clé API dans la [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
    avec l'API **YouTube Data API v3** activée.
-2. Récupérez l'ID de votre chaîne (commence par `UC...`), visible dans
-   `https://www.youtube.com/account_advanced`.
-3. Copiez `.env.example` vers `.env.local` et renseignez les valeurs :
+2. Copiez `.env.example` vers `.env.local` et renseignez la clé :
 
    ```bash
    cp .env.example .env.local
@@ -48,11 +50,9 @@ YouTube et le nombre de vues.
 
    ```env
    YOUTUBE_API_KEY=votre_cle_api
-   YOUTUBE_CHANNEL_ID=UCxxxxxxxxxxxxxxxxxxxxxx
-   NEXT_PUBLIC_YOUTUBE_CHANNEL_URL=https://www.youtube.com/@votre-chaine
    ```
 
-4. Relancez `npm run dev`. La page d'accueil affiche alors les abonnés, les
+3. Relancez `npm run dev`. La page d'accueil affiche alors les abonnés, les
    vues totales de la chaîne et les vues par morceau, actualisées
    automatiquement toutes les 5 minutes côté client (et mises en cache 10
    minutes côté serveur pour préserver le quota de l'API).
@@ -60,6 +60,16 @@ YouTube et le nombre de vues.
 Sans clé API, le site reste pleinement fonctionnel : seul l'encart de
 statistiques affiche un message d'invitation à la configuration, et le
 nombre de vues par morceau n'apparaît simplement pas.
+
+> ⚠️ **`.env` / `.env.local` ne doivent jamais être commités.** Ils sont
+> ignorés par `.gitignore` — ne forcez jamais leur ajout (`git add -f`) et
+> ne collez jamais de clé API réelle dans `.env.example`, qui est un
+> gabarit public. Une clé committée sur GitHub doit être considérée comme
+> compromise même après suppression du fichier, car elle reste dans
+> l'historique Git : régénérez-la immédiatement dans la Google Cloud
+> Console si cela arrive. Cloudflare ne lit de toute façon jamais les
+> fichiers du dépôt pour configurer un Worker déployé — voir la section
+> suivante pour la bonne méthode (secret Cloudflare).
 
 ## Déploiement sur Cloudflare Workers
 
@@ -73,32 +83,21 @@ déjà installé et configuré (`wrangler.jsonc`, `open-next.config.ts`).
    npx wrangler login
    ```
 
-2. Renseignez la clé API en tant que **secret** (jamais commité) :
+2. Renseignez la clé API en tant que **secret** (jamais commité) — c'est la
+   seule variable requise, l'ID de chaîne et l'URL sont déjà dans le code :
 
    ```bash
    npx wrangler secret put YOUTUBE_API_KEY
    ```
 
-3. Renseignez l'ID de chaîne dans `wrangler.jsonc` (bloc `vars`), ou via :
-
-   ```bash
-   npx wrangler secret put YOUTUBE_CHANNEL_ID
-   ```
-
-   ⚠️ `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL` est une variable **publique**, inlinée
-   par Next.js au moment du `build`. Elle doit donc être définie *avant* la
-   compilation (dans `wrangler.jsonc` → `vars`, ou en variable d'environnement
-   du shell/CI qui lance `npm run cf:deploy`), pas seulement comme secret
-   runtime.
-
-4. Testez en local avec le runtime Cloudflare (workerd), via un fichier
-   `.dev.vars` (non commité, mêmes clés que `.env.example`) :
+3. Testez en local avec le runtime Cloudflare (workerd), via un fichier
+   `.dev.vars` (non commité, même contenu que `.env.local`) :
 
    ```bash
    npm run cf:preview
    ```
 
-5. Déployez :
+4. Déployez :
 
    ```bash
    npm run cf:deploy
@@ -124,10 +123,10 @@ command" par défaut du dashboard resté sur `npm run build`, le déploiement
 génère bien `.open-next/` et aboutit. Aucun réglage à changer dans le
 dashboard pour cette partie.
 
-Pensez en revanche à renseigner `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID` et
-`NEXT_PUBLIC_YOUTUBE_CHANNEL_URL` dans Settings → Variables and Secrets du
-projet (secret pour la clé API, variables pour le reste) — sans quoi le
-site se déploie mais reste sans statistiques YouTube.
+Pensez en revanche à renseigner `YOUTUBE_API_KEY` comme **secret** (pas
+variable) dans Settings → Variables and Secrets du projet — sans quoi le
+site se déploie mais reste sans statistiques YouTube. C'est la seule
+variable nécessaire.
 
 ⚠️ Ne changez jamais le script `build` de `package.json` pour qu'il appelle
 `opennextjs-cloudflare build` : cet outil exécute lui-même `npm run build`
@@ -139,9 +138,8 @@ mémoire).
 
 Le projet reste une application Next.js standard, donc également
 déployable sur [Vercel](https://vercel.com/new) ou tout hébergeur
-supportant Next.js, en renseignant les mêmes variables d'environnement
-(`YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`, `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL`)
-dans les paramètres du projet.
+supportant Next.js, en renseignant `YOUTUBE_API_KEY` dans les paramètres du
+projet (jamais dans un fichier commité).
 
 ## Stack technique
 

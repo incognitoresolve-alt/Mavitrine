@@ -14,11 +14,9 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  },
-  // Variables non secrètes. Pour la clé API, utilisez plutôt :
-  //   npx wrangler secret put YOUTUBE_API_KEY
-  "vars": {
-    "YOUTUBE_CHANNEL_ID": "",
-    "NEXT_PUBLIC_YOUTUBE_CHANNEL_URL": ""
   }
+  // Seule variable requise : la clé API YouTube, en secret (jamais commitée) :
+  //   npx wrangler secret put YOUTUBE_API_KEY
+  // L'ID de chaîne et l'URL publique sont codés en dur dans src/lib/config.ts
+  // (non sensibles), donc rien d'autre à configurer ici.
 }
