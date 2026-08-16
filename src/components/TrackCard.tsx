@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatCompact, formatDate, formatFull } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
-import { shareLink, shareTrackStory } from "@/lib/share";
+import { shareLink, shareTrackStory, shortVideoUrl } from "@/lib/share";
 import { loadYouTubeIframeApi } from "@/lib/youtubePlayer";
 import type { UploadedVideo } from "@/lib/youtube";
 
@@ -72,7 +72,7 @@ export default function TrackCard({
   const [storyFeedback, setStoryFeedback] = useState<string | null>(null);
   const onEndedRef = useRef(onEnded);
   const thumbnail = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
-  const watchUrl = `https://www.youtube.com/watch?v=${video.id}`;
+  const watchUrl = shortVideoUrl(video.id);
   const iframeId = `yt-player-${video.id}`;
 
   useEffect(() => {

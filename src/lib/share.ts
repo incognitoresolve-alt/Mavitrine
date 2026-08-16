@@ -69,6 +69,11 @@ function wrapText(
   return lines;
 }
 
+/** URL courte officielle YouTube, plus lisible qu'un lien watch?v= complet. */
+export function shortVideoUrl(videoId: string): string {
+  return `https://youtu.be/${videoId}`;
+}
+
 async function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -130,6 +135,23 @@ export async function generateStoryImage(
     ctx.fillText(line, STORY_WIDTH / 2, titleStartY + i * 76);
   });
 
+  const url = shortVideoUrl(video.id).replace(/^https?:\/\//, "");
+  ctx.font = "bold 38px Arial";
+  const urlWidth = ctx.measureText(url).width;
+  const pillPaddingX = 36;
+  const pillHeight = 68;
+  const pillY = STORY_HEIGHT - 190;
+  const pillX = STORY_WIDTH / 2 - urlWidth / 2 - pillPaddingX;
+  const pillW = urlWidth + pillPaddingX * 2;
+
+  ctx.fillStyle = "rgba(255,255,255,0.15)";
+  ctx.beginPath();
+  ctx.roundRect(pillX, pillY - pillHeight / 2, pillW, pillHeight, pillHeight / 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(url, STORY_WIDTH / 2, pillY + 13);
+
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = "40px Arial";
   ctx.fillText(site.name, STORY_WIDTH / 2, STORY_HEIGHT - 90);
@@ -152,6 +174,7 @@ export async function shareTrackStory(
   if (!blob) return "failed";
 
   const file = new File([blob], `${video.id}.png`, { type: "image/png" });
+  const url = shortVideoUrl(video.id);
 
   if (
     typeof navigator !== "undefined" &&
@@ -161,7 +184,8 @@ export async function shareTrackStory(
       await navigator.share({
         files: [file],
         title: video.title,
-        text: `${video.title} — ${site.name}`,
+        text: `${video.title} — ${site.name}\n${url}`,
+        url,
       });
       return "shared";
     } catch (err) {
@@ -171,13 +195,13 @@ export async function shareTrackStory(
     }
   }
 
-  const url = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
+  a.href = objectUrl;
   a.download = `${video.title.replace(/[^\w-]+/g, "-")}.png`;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(objectUrl);
   return "downloaded";
 }
