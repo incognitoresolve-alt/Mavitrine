@@ -1,5 +1,7 @@
+import ShareButton from "@/components/ShareButton";
 import StatsBar from "@/components/StatsBar";
 import TrackCard from "@/components/TrackCard";
+import TrackDropdownNav from "@/components/TrackDropdownNav";
 import { siteConfig } from "@/lib/config";
 import { getChannelStats, getChannelUploads, getVideoStats } from "@/lib/youtube";
 
@@ -25,19 +27,28 @@ export default async function Home() {
         <h1 className="text-4xl font-bold sm:text-5xl">{siteConfig.name}</h1>
         <p className="max-w-xl text-white/70">{siteConfig.description}</p>
 
-        {siteConfig.youtubeChannelUrl && (
-          <a
-            href={siteConfig.youtubeChannelUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-red-600 px-6 py-2.5 text-sm font-semibold transition hover:bg-red-500"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-            S&apos;abonner sur YouTube
-          </a>
-        )}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          {siteConfig.youtubeChannelUrl && (
+            <a
+              href={siteConfig.youtubeChannelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-6 py-2.5 text-sm font-semibold transition hover:bg-red-500"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              S&apos;abonner sur YouTube
+            </a>
+          )}
+          <ShareButton
+            target={{
+              title: siteConfig.name,
+              text: siteConfig.description,
+            }}
+            label="Partager la vitrine"
+          />
+        </div>
 
         <div className="mt-4 w-full">
           <StatsBar initialStats={channelStats} />
@@ -45,7 +56,12 @@ export default async function Home() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
-        <h2 className="mb-6 text-xl font-semibold">Morceaux</h2>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold">Morceaux</h2>
+          <TrackDropdownNav
+            tracks={uploads.map((v) => ({ id: v.id, title: v.title }))}
+          />
+        </div>
         {uploads.length === 0 ? (
           <p className="rounded-xl border border-dashed border-white/20 px-5 py-4 text-sm text-white/60">
             Aucune vidéo trouvée. Vérifiez que{" "}
