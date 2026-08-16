@@ -18,7 +18,7 @@ export default async function Home() {
 
   return (
     <div className="flex-1 bg-gradient-to-b from-neutral-950 via-neutral-950 to-neutral-900 text-white">
-      <header className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-6 pb-10 pt-16 text-center sm:pt-24">
+      <header className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 pb-10 pt-12 text-center sm:px-6 sm:pt-24">
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-white/50">
           {siteConfig.tagline}
         </p>
@@ -44,7 +44,7 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 pb-24">
+      <main className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
         <h2 className="mb-6 text-xl font-semibold">Morceaux</h2>
         {uploads.length === 0 ? (
           <p className="rounded-xl border border-dashed border-white/20 px-5 py-4 text-sm text-white/60">

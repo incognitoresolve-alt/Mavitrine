@@ -50,7 +50,7 @@ export default function TrackCard({ video, viewCount }: Props) {
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="font-semibold leading-snug">{video.title}</h3>
+        <h3 className="break-words font-semibold leading-snug">{video.title}</h3>
         <p className="text-xs text-white/50">{formatDate(video.publishedAt)}</p>
 
         <div className="mt-auto flex items-center justify-between pt-2 text-xs text-white/50">

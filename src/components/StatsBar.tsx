@@ -24,11 +24,14 @@ function StatCard({
   title?: string;
 }) {
   return (
-    <div className="flex-1 min-w-[140px] rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-center backdrop-blur">
-      <p className="text-2xl font-semibold tabular-nums sm:text-3xl" title={title}>
+    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-center backdrop-blur sm:px-5 sm:py-4">
+      <p
+        className="text-lg font-semibold tabular-nums sm:text-2xl md:text-3xl"
+        title={title}
+      >
         {value}
       </p>
-      <p className="mt-1 text-xs uppercase tracking-wide text-white/60">
+      <p className="mt-1 text-[10px] uppercase tracking-wide text-white/60 sm:text-xs">
         {label}
       </p>
     </div>
@@ -80,7 +83,7 @@ export default function StatsBar({ initialStats }: Props) {
   }
 
   return (
-    <div className="flex flex-wrap gap-3 sm:gap-4">
+    <div className="grid grid-cols-3 gap-2 sm:gap-4">
       <StatCard
         label="Abonnés"
         value={
