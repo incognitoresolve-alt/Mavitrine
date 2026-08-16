@@ -61,13 +61,59 @@ Sans clé API, le site reste pleinement fonctionnel : seul l'encart de
 statistiques affiche un message d'invitation à la configuration, et le
 nombre de vues par morceau n'apparaît simplement pas.
 
-## Déploiement
+## Déploiement sur Cloudflare Workers
 
-Le projet est une application Next.js standard, déployable sur
-[Vercel](https://vercel.com/new) ou tout hébergeur supportant Next.js.
-Pensez à renseigner les variables d'environnement (`YOUTUBE_API_KEY`,
-`YOUTUBE_CHANNEL_ID`, `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL`) dans les
-paramètres du projet chez votre hébergeur.
+Le projet est prêt à être déployé sur Cloudflare Workers via
+l'[adaptateur OpenNext](https://opennext.js.org/cloudflare) (`@opennextjs/cloudflare`),
+déjà installé et configuré (`wrangler.jsonc`, `open-next.config.ts`).
+
+1. Connectez-vous à votre compte Cloudflare :
+
+   ```bash
+   npx wrangler login
+   ```
+
+2. Renseignez la clé API en tant que **secret** (jamais commité) :
+
+   ```bash
+   npx wrangler secret put YOUTUBE_API_KEY
+   ```
+
+3. Renseignez l'ID de chaîne dans `wrangler.jsonc` (bloc `vars`), ou via :
+
+   ```bash
+   npx wrangler secret put YOUTUBE_CHANNEL_ID
+   ```
+
+   ⚠️ `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL` est une variable **publique**, inlinée
+   par Next.js au moment du `build`. Elle doit donc être définie *avant* la
+   compilation (dans `wrangler.jsonc` → `vars`, ou en variable d'environnement
+   du shell/CI qui lance `npm run cf:deploy`), pas seulement comme secret
+   runtime.
+
+4. Testez en local avec le runtime Cloudflare (workerd), via un fichier
+   `.dev.vars` (non commité, mêmes clés que `.env.example`) :
+
+   ```bash
+   npm run cf:preview
+   ```
+
+5. Déployez :
+
+   ```bash
+   npm run cf:deploy
+   ```
+
+Le build a été vérifié : le Worker généré pèse environ 960 Kio compressés
+(gzip), bien sous la limite de 3 Mio du plan gratuit Cloudflare.
+
+### Autres hébergeurs
+
+Le projet reste une application Next.js standard, donc également
+déployable sur [Vercel](https://vercel.com/new) ou tout hébergeur
+supportant Next.js, en renseignant les mêmes variables d'environnement
+(`YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`, `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL`)
+dans les paramètres du projet.
 
 ## Stack technique
 

@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mavitrine",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Variables non secrètes. Pour la clé API, utilisez plutôt :
+  //   npx wrangler secret put YOUTUBE_API_KEY
+  "vars": {
+    "YOUTUBE_CHANNEL_ID": "",
+    "NEXT_PUBLIC_YOUTUBE_CHANNEL_URL": ""
+  }
+}
