@@ -113,25 +113,21 @@ Si vous connectez le dépôt GitHub directement dans le dashboard Cloudflare
 (Workers & Pages → votre projet → Settings → Build), Cloudflare détecte un
 projet Next.js et propose par défaut :
 
-- Build command : `npm run build`
+- Build command : `npm run build` (= `next build` seul)
 - Deploy command : `npx wrangler deploy`
 
-Ces valeurs par défaut **ne suffisent pas** ici : `npm run build` ne fait
-que `next build` (il ne produit pas `.open-next/`, requis par
-`wrangler deploy`), ce qui provoque l'erreur
-`Could not find compiled Open Next config, did you run the build command?`.
+`npm run build` seul ne produit pas `.open-next/` (requis par
+`wrangler deploy`). C'est pris en charge automatiquement : `wrangler.jsonc`
+déclare un `build.command` (`npm run cf:build`) que **`wrangler deploy`
+exécute lui-même** avant de packager le Worker — donc même avec le "Build
+command" par défaut du dashboard resté sur `npm run build`, le déploiement
+génère bien `.open-next/` et aboutit. Aucun réglage à changer dans le
+dashboard pour cette partie.
 
-➡️ Dans les réglages du projet, changez la **Build command** pour :
-
-```
-npm run cf:build
-```
-
-(ou directement `npx opennextjs-cloudflare build`) et laissez la **Deploy
-command** telle quelle (`npx wrangler deploy`). Pensez aussi à renseigner
-`YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID` et
+Pensez en revanche à renseigner `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID` et
 `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL` dans Settings → Variables and Secrets du
-projet (secrets pour la clé API, variables pour le reste).
+projet (secret pour la clé API, variables pour le reste) — sans quoi le
+site se déploie mais reste sans statistiques YouTube.
 
 ⚠️ Ne changez jamais le script `build` de `package.json` pour qu'il appelle
 `opennextjs-cloudflare build` : cet outil exécute lui-même `npm run build`

@@ -2,6 +2,13 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mavitrine",
   "main": ".open-next/worker.js",
+  // Exécuté automatiquement par `wrangler deploy` / `wrangler dev` avant le
+  // bundling : garantit que .open-next/ existe même si la "Build command"
+  // configurée côté dashboard Cloudflare (Workers Builds) est restée sur la
+  // valeur par défaut `npm run build` (next build seul, sans .open-next/).
+  "build": {
+    "command": "npm run cf:build"
+  },
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
