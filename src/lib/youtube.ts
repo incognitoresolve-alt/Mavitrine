@@ -17,8 +17,23 @@ export type VideoStats = {
   likeCount: number | null;
 };
 
+export type UploadedVideo = {
+  id: string;
+  title: string;
+  publishedAt: string;
+};
+
 function isConfigured(): boolean {
   return Boolean(process.env.YOUTUBE_API_KEY && siteConfig.youtubeChannelId);
+}
+
+/**
+ * L'ID de la playlist "uploads" (toutes les vidéos publiques d'une chaîne)
+ * se déduit de l'ID de chaîne en remplaçant le préfixe "UC" par "UU" —
+ * convention YouTube, aucun appel API supplémentaire nécessaire.
+ */
+function uploadsPlaylistId(channelId: string): string {
+  return `UU${channelId.slice(2)}`;
 }
 
 /**
@@ -55,6 +70,56 @@ export async function getChannelStats(): Promise<ChannelStats | null> {
     };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Récupère les vidéos publiques de la chaîne (playlist "uploads"), triées
+ * de la plus récente à la plus ancienne. C'est la source de vérité de la
+ * page d'accueil : toute nouvelle vidéo publiée sur la chaîne apparaît
+ * automatiquement, sans intervention manuelle. Renvoie un tableau vide si
+ * la clé API n'est pas configurée ou en cas d'erreur.
+ */
+export async function getChannelUploads(
+  maxResults = 50,
+): Promise<UploadedVideo[]> {
+  if (!isConfigured()) return [];
+
+  const url = new URL(`${API_BASE}/playlistItems`);
+  url.searchParams.set("part", "snippet");
+  url.searchParams.set(
+    "playlistId",
+    uploadsPlaylistId(siteConfig.youtubeChannelId),
+  );
+  url.searchParams.set("maxResults", String(maxResults));
+  url.searchParams.set("key", process.env.YOUTUBE_API_KEY!);
+
+  try {
+    const res = await fetch(url, { next: { revalidate: 600 } });
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const videos: UploadedVideo[] = (data.items ?? [])
+      .filter((item: { snippet?: { resourceId?: { videoId?: string } } }) =>
+        Boolean(item.snippet?.resourceId?.videoId),
+      )
+      .map(
+        (item: {
+          snippet: {
+            resourceId: { videoId: string };
+            title: string;
+            publishedAt: string;
+          };
+        }) => ({
+          id: item.snippet.resourceId.videoId,
+          title: item.snippet.title,
+          publishedAt: item.snippet.publishedAt,
+        }),
+      );
+
+    return videos.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  } catch {
+    return [];
   }
 }
 

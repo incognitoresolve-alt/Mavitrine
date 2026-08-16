@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { formatCompact, formatFull } from "@/lib/format";
-import type { Track } from "@/data/tracks";
+import { formatCompact, formatDate, formatFull } from "@/lib/format";
+import type { UploadedVideo } from "@/lib/youtube";
 
 type Props = {
-  track: Track;
+  video: UploadedVideo;
   viewCount: number | null;
 };
 
-export default function TrackCard({ track, viewCount }: Props) {
+export default function TrackCard({ video, viewCount }: Props) {
   const [playing, setPlaying] = useState(false);
-  const thumbnail = `https://i.ytimg.com/vi/${track.youtubeId}/hqdefault.jpg`;
+  const thumbnail = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:border-white/20">
@@ -19,8 +19,8 @@ export default function TrackCard({ track, viewCount }: Props) {
         {playing ? (
           <iframe
             className="h-full w-full"
-            src={`https://www.youtube.com/embed/${track.youtubeId}?autoplay=1`}
-            title={track.title}
+            src={`https://www.youtube.com/embed/${video.id}?autoplay=1`}
+            title={video.title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
@@ -29,12 +29,12 @@ export default function TrackCard({ track, viewCount }: Props) {
             type="button"
             onClick={() => setPlaying(true)}
             className="relative h-full w-full cursor-pointer"
-            aria-label={`Lire ${track.title}`}
+            aria-label={`Lire ${video.title}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={thumbnail}
-              alt={track.title}
+              alt={video.title}
               className="h-full w-full object-cover transition group-hover:scale-105"
               loading="lazy"
             />
@@ -50,28 +50,15 @@ export default function TrackCard({ track, viewCount }: Props) {
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="font-semibold leading-snug">{track.title}</h3>
-        <p className="text-sm text-white/60">{track.description}</p>
-
-        {track.tags && track.tags.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {track.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/70"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        <h3 className="font-semibold leading-snug">{video.title}</h3>
+        <p className="text-xs text-white/50">{formatDate(video.publishedAt)}</p>
 
         <div className="mt-auto flex items-center justify-between pt-2 text-xs text-white/50">
           <span title={viewCount !== null ? formatFull(viewCount) : undefined}>
             {viewCount !== null ? `${formatCompact(viewCount)} vues` : ""}
           </span>
           <a
-            href={`https://www.youtube.com/watch?v=${track.youtubeId}`}
+            href={`https://www.youtube.com/watch?v=${video.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="underline-offset-2 hover:underline"

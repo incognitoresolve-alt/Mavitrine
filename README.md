@@ -1,7 +1,9 @@
 # Ma Vitrine
 
-Site vitrine pour présenter des musiques composées par IA, avec un module de
-statistiques YouTube en direct (abonnés, vues totales, vues par morceau).
+Site vitrine pour présenter des musiques composées par IA. La liste des
+morceaux et les statistiques (abonnés, vues totales, vues par morceau) sont
+entièrement automatiques : elles viennent de votre chaîne YouTube via
+l'API YouTube Data v3, sans aucune intervention manuelle.
 
 ## Démarrer en local
 
@@ -12,29 +14,19 @@ npm run dev
 
 Le site est disponible sur [http://localhost:3000](http://localhost:3000).
 
-Sans configuration, le site fonctionne déjà : il affiche un morceau
-d'exemple et un message indiquant que les statistiques YouTube ne sont pas
-encore configurées.
+## Ajouter des morceaux
 
-## Ajouter vos morceaux
+Rien à faire ici : chaque vidéo publiée publiquement sur votre chaîne
+YouTube apparaît automatiquement sur la page d'accueil (titre, vignette,
+date de publication, nombre de vues), triée de la plus récente à la plus
+ancienne. Publiez une nouvelle vidéo sur YouTube, elle apparaît sur le site
+au prochain rafraîchissement (voir les délais de cache ci-dessous) — aucune
+modification de code n'est nécessaire.
 
-Éditez `src/data/tracks.ts` et ajoutez une entrée par morceau :
+Techniquement, la page lit la playlist "uploads" de la chaîne (toutes ses
+vidéos publiques) via `getChannelUploads()` dans `src/lib/youtube.ts`.
 
-```ts
-{
-  id: "mon-morceau",
-  title: "Titre du morceau",
-  description: "Style, prompt ou modèle d'IA utilisé (Suno, Udio...)",
-  youtubeId: "ID_DE_LA_VIDEO", // la partie après ?v= dans l'URL YouTube
-  tags: ["Suno", "Lofi"],
-  releaseDate: "2026-03-01",
-}
-```
-
-Chaque morceau devient une carte sur la page d'accueil avec le lecteur
-YouTube et le nombre de vues.
-
-## Configurer les statistiques YouTube (abonnés + vues)
+## Configurer les statistiques et la liste des morceaux
 
 L'ID de chaîne et l'URL publique sont déjà codés en dur dans
 `src/lib/config.ts` (ce ne sont pas des secrets, ils sont visibles par
@@ -52,14 +44,16 @@ n'importe qui sur YouTube). La **seule** chose à configurer est la clé API :
    YOUTUBE_API_KEY=votre_cle_api
    ```
 
-3. Relancez `npm run dev`. La page d'accueil affiche alors les abonnés, les
-   vues totales de la chaîne et les vues par morceau, actualisées
-   automatiquement toutes les 5 minutes côté client (et mises en cache 10
-   minutes côté serveur pour préserver le quota de l'API).
+3. Relancez `npm run dev`. La page d'accueil affiche alors la liste des
+   morceaux, les abonnés, les vues totales de la chaîne et les vues par
+   morceau. Les stats globales (encart abonnés) sont réactualisées côté
+   client toutes les 5 minutes ; la liste des morceaux et les vues sont
+   mises en cache 10 minutes côté serveur, pour préserver le quota de
+   l'API.
 
-Sans clé API, le site reste pleinement fonctionnel : seul l'encart de
-statistiques affiche un message d'invitation à la configuration, et le
-nombre de vues par morceau n'apparaît simplement pas.
+Sans clé API, le site reste utilisable mais vide : la liste de morceaux et
+l'encart de statistiques affichent chacun un message invitant à configurer
+`YOUTUBE_API_KEY`.
 
 > ⚠️ **`.env` / `.env.local` ne doivent jamais être commités.** Ils sont
 > ignorés par `.gitignore` — ne forcez jamais leur ajout (`git add -f`) et

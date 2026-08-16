@@ -1,18 +1,14 @@
 import StatsBar from "@/components/StatsBar";
 import TrackCard from "@/components/TrackCard";
-import { tracks } from "@/data/tracks";
 import { siteConfig } from "@/lib/config";
-import { getChannelStats, getVideoStats } from "@/lib/youtube";
+import { getChannelStats, getChannelUploads, getVideoStats } from "@/lib/youtube";
 
 export default async function Home() {
+  const uploads = await getChannelUploads();
   const [channelStats, videoStats] = await Promise.all([
     getChannelStats(),
-    getVideoStats(tracks.map((t) => t.youtubeId)),
+    getVideoStats(uploads.map((v) => v.id)),
   ]);
-
-  const sortedTracks = [...tracks].sort((a, b) =>
-    (b.releaseDate ?? "").localeCompare(a.releaseDate ?? ""),
-  );
 
   return (
     <div className="flex-1 bg-gradient-to-b from-neutral-950 via-neutral-950 to-neutral-900 text-white">
@@ -44,15 +40,24 @@ export default async function Home() {
 
       <main className="mx-auto max-w-5xl px-6 pb-24">
         <h2 className="mb-6 text-xl font-semibold">Morceaux</h2>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedTracks.map((track) => (
-            <TrackCard
-              key={track.id}
-              track={track}
-              viewCount={videoStats.get(track.youtubeId)?.viewCount ?? null}
-            />
-          ))}
-        </div>
+        {uploads.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-white/20 px-5 py-4 text-sm text-white/60">
+            Aucune vidéo trouvée. Vérifiez que{" "}
+            <code className="rounded bg-white/10 px-1 py-0.5">YOUTUBE_API_KEY</code>{" "}
+            est bien configurée, ou revenez après votre prochaine publication
+            YouTube : les morceaux apparaissent ici automatiquement.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {uploads.map((video) => (
+              <TrackCard
+                key={video.id}
+                video={video}
+                viewCount={videoStats.get(video.id)?.viewCount ?? null}
+              />
+            ))}
+          </div>
+        )}
       </main>
 
       <footer className="border-t border-white/10 px-6 py-8 text-center text-sm text-white/40">
