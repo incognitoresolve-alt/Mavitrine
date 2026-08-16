@@ -33,7 +33,7 @@ export default function ShareButton({
       onClick={handleClick}
       className={
         className ??
-        "inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+        "inline-flex items-center gap-2 rounded-full border border-line-strong px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-surface-strong"
       }
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">

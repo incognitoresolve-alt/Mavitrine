@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatCompact, formatDate, formatFull } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
 import { shareLink, shareTrackStory } from "@/lib/share";
+import { loadYouTubeIframeApi } from "@/lib/youtubePlayer";
 import type { UploadedVideo } from "@/lib/youtube";
 
 type Props = {
   video: UploadedVideo;
   viewCount: number | null;
+  isPlaying: boolean;
+  onPlay: () => void;
+  onEnded?: () => void;
 };
 
 function IconButton({
@@ -25,7 +29,7 @@ function IconButton({
   feedback?: string | null;
 }) {
   const className =
-    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-white/60 transition hover:bg-white/10 hover:text-white";
+    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-muted transition hover:bg-surface-strong hover:text-foreground";
 
   if (href) {
     return (
@@ -57,12 +61,47 @@ function IconButton({
   );
 }
 
-export default function TrackCard({ video, viewCount }: Props) {
-  const [playing, setPlaying] = useState(false);
+export default function TrackCard({
+  video,
+  viewCount,
+  isPlaying,
+  onPlay,
+  onEnded,
+}: Props) {
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [storyFeedback, setStoryFeedback] = useState<string | null>(null);
+  const onEndedRef = useRef(onEnded);
   const thumbnail = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
   const watchUrl = `https://www.youtube.com/watch?v=${video.id}`;
+  const iframeId = `yt-player-${video.id}`;
+
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    let cancelled = false;
+    let player: { destroy: () => void } | null = null;
+
+    loadYouTubeIframeApi().then(() => {
+      if (cancelled || !window.YT) return;
+      player = new window.YT.Player(iframeId, {
+        events: {
+          onStateChange: (event) => {
+            if (event.data === window.YT!.PlayerState.ENDED) {
+              onEndedRef.current?.();
+            }
+          },
+        },
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      player?.destroy();
+    };
+  }, [isPlaying, iframeId]);
 
   async function handleShare() {
     const result = await shareLink({
@@ -90,13 +129,14 @@ export default function TrackCard({ video, viewCount }: Props) {
   return (
     <article
       id={`track-${video.id}`}
-      className="group flex scroll-mt-6 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:border-white/20"
+      className="group flex scroll-mt-6 flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-line-strong"
     >
       <div className="relative aspect-video w-full bg-black">
-        {playing ? (
+        {isPlaying ? (
           <iframe
+            id={iframeId}
             className="h-full w-full"
-            src={`https://www.youtube.com/embed/${video.id}?autoplay=1`}
+            src={`https://www.youtube.com/embed/${video.id}?autoplay=1&enablejsapi=1`}
             title={video.title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -104,7 +144,7 @@ export default function TrackCard({ video, viewCount }: Props) {
         ) : (
           <button
             type="button"
-            onClick={() => setPlaying(true)}
+            onClick={onPlay}
             className="relative h-full w-full cursor-pointer"
             aria-label={`Lire ${video.title}`}
           >
@@ -128,9 +168,9 @@ export default function TrackCard({ video, viewCount }: Props) {
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="break-words font-semibold leading-snug">{video.title}</h3>
-        <p className="text-xs text-white/50">{formatDate(video.publishedAt)}</p>
+        <p className="text-xs text-faint">{formatDate(video.publishedAt)}</p>
 
-        <div className="mt-auto flex items-center justify-between pt-2 text-xs text-white/50">
+        <div className="mt-auto flex items-center justify-between pt-2 text-xs text-faint">
           <span title={viewCount !== null ? formatFull(viewCount) : undefined}>
             {viewCount !== null ? `${formatCompact(viewCount)} vues` : ""}
           </span>
@@ -144,7 +184,7 @@ export default function TrackCard({ video, viewCount }: Props) {
           </a>
         </div>
 
-        <div className="-mx-1 flex items-center gap-0.5 border-t border-white/10 pt-1">
+        <div className="-mx-1 flex items-center gap-0.5 border-t border-line pt-1">
           <IconButton href={watchUrl} label="Aimer sur YouTube">
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
               <path d="M12 21s-6.7-4.35-9.3-8.1C.8 10.1 1.4 6.6 4.4 5.1c2.2-1.1 4.6-.3 6.1 1.4l1.5 1.7 1.5-1.7c1.5-1.7 3.9-2.5 6.1-1.4 3 1.5 3.6 5 1.7 7.8C18.7 16.65 12 21 12 21z" />

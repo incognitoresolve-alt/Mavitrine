@@ -24,14 +24,14 @@ function StatCard({
   title?: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 text-center backdrop-blur sm:px-5 sm:py-4">
+    <div className="rounded-xl border border-line bg-surface px-2 py-3 text-center backdrop-blur sm:px-5 sm:py-4">
       <p
         className="text-lg font-semibold tabular-nums sm:text-2xl md:text-3xl"
         title={title}
       >
         {value}
       </p>
-      <p className="mt-1 text-[10px] uppercase tracking-wide text-white/60 sm:text-xs">
+      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted sm:text-xs">
         {label}
       </p>
     </div>
@@ -71,12 +71,12 @@ export default function StatsBar({ initialStats }: Props) {
 
   if (!configured || !stats) {
     return (
-      <div className="rounded-xl border border-dashed border-white/20 px-5 py-4 text-sm text-white/60">
+      <div className="rounded-xl border border-dashed border-line-strong px-5 py-4 text-sm text-muted">
         Statistiques YouTube non configurées. Ajoutez{" "}
-        <code className="rounded bg-white/10 px-1 py-0.5">YOUTUBE_API_KEY</code>{" "}
+        <code className="rounded bg-surface-strong px-1 py-0.5">YOUTUBE_API_KEY</code>{" "}
         et{" "}
-        <code className="rounded bg-white/10 px-1 py-0.5">YOUTUBE_CHANNEL_ID</code>{" "}
-        dans votre fichier <code className="rounded bg-white/10 px-1 py-0.5">.env.local</code>{" "}
+        <code className="rounded bg-surface-strong px-1 py-0.5">YOUTUBE_CHANNEL_ID</code>{" "}
+        dans votre fichier <code className="rounded bg-surface-strong px-1 py-0.5">.env.local</code>{" "}
         pour afficher les abonnés et les vues en direct.
       </div>
     );

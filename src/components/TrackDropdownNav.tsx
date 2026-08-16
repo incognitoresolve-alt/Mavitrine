@@ -23,7 +23,7 @@ export default function TrackDropdownNav({ tracks }: Props) {
       onChange={handleChange}
       defaultValue=""
       aria-label="Aller à un morceau"
-      className="w-full max-w-[220px] rounded-lg border border-white/20 bg-neutral-900 px-3 py-2 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-white/30"
+      className="w-full max-w-[220px] rounded-lg border border-line-strong bg-background px-3 py-2 text-sm text-foreground [color-scheme:light] focus:outline-none focus:ring-2 focus:ring-line-strong dark:[color-scheme:dark]"
     >
       <option value="" disabled>
         Aller à un morceau…
