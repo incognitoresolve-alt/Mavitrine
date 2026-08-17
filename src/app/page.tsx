@@ -1,5 +1,5 @@
+import ProfileStats from "@/components/ProfileStats";
 import ShareButton from "@/components/ShareButton";
-import StatsBar from "@/components/StatsBar";
 import ThemeToggle from "@/components/ThemeToggle";
 import TrackDropdownNav from "@/components/TrackDropdownNav";
 import TrackList from "@/components/TrackList";
@@ -19,68 +19,107 @@ export default async function Home() {
     getVideoStats(uploads.map((v) => v.id)),
   ]);
 
+  const handle = siteConfig.youtubeChannelUrl.replace(/^https?:\/\/(www\.)?/, "");
+
   return (
-    <div className="flex-1 bg-background text-foreground dark:bg-gradient-to-b dark:from-neutral-950 dark:via-neutral-950 dark:to-neutral-900">
-      <header className="relative mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 pb-10 pt-12 text-center sm:px-6 sm:pt-24">
-        <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
-          <ThemeToggle />
+    <div className="mx-auto flex min-h-full max-w-3xl flex-1 flex-col bg-background text-foreground">
+      {/* Barre du haut, façon barre de profil Instagram */}
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <span className="text-base font-semibold">{siteConfig.name}</span>
+        <ThemeToggle />
+      </div>
+
+      <header className="px-4 pb-5 pt-5 sm:px-6">
+        <div className="flex items-center gap-5 sm:gap-8">
+          {channelStats?.thumbnailUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={channelStats.thumbnailUrl}
+              alt={siteConfig.name}
+              className="h-20 w-20 shrink-0 rounded-full object-cover ring-2 ring-line sm:h-24 sm:w-24"
+            />
+          ) : (
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-red-600 ring-2 ring-line sm:h-24 sm:w-24">
+              <svg viewBox="0 0 24 24" className="h-9 w-9 fill-white">
+                <path d="M9 18V5l12-2v13" strokeWidth="1.6" className="fill-none stroke-white" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="6" cy="18" r="3" fill="white" />
+                <circle cx="18" cy="16" r="3" fill="white" />
+              </svg>
+            </div>
+          )}
+
+          <ProfileStats initialStats={channelStats} />
         </div>
 
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-faint">
-          {siteConfig.tagline}
-        </p>
-        <h1 className="text-4xl font-bold sm:text-5xl">{siteConfig.name}</h1>
-        <p className="max-w-xl text-muted">{siteConfig.description}</p>
-
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-4">
+          <h1 className="font-bold">{siteConfig.name}</h1>
+          <p className="text-sm text-muted">{siteConfig.tagline}</p>
+          <p className="mt-1 text-sm">{siteConfig.description}</p>
           {siteConfig.youtubeChannelUrl && (
             <a
               href={siteConfig.youtubeChannelUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500"
+              className="mt-1 inline-block text-sm font-semibold text-blue-500 hover:underline"
+            >
+              {handle}
+            </a>
+          )}
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          {siteConfig.youtubeChannelUrl && (
+            <a
+              href={siteConfig.youtubeChannelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white">
                 <path d="M8 5v14l11-7z" />
               </svg>
-              S&apos;abonner sur YouTube
+              S&apos;abonner
             </a>
           )}
           <ShareButton
-            target={{
-              title: siteConfig.name,
-              text: siteConfig.description,
-            }}
-            label="Partager la vitrine"
+            target={{ title: siteConfig.name, text: siteConfig.description }}
+            label="Partager"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-strong"
           />
-        </div>
-
-        <div className="mt-4 w-full">
-          <StatsBar initialStats={channelStats} />
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Morceaux</h2>
-          <TrackDropdownNav
-            tracks={uploads.map((v) => ({ id: v.id, title: v.title }))}
-          />
+      {/* Barre d'onglets, façon grille/reels/identifié·e d'Instagram */}
+      <div className="flex border-y border-line text-xs font-semibold uppercase tracking-wide text-faint">
+        <div className="flex flex-1 items-center justify-center gap-1.5 border-t-2 border-foreground py-3 text-foreground">
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+            <path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z" />
+          </svg>
+          Morceaux
         </div>
+      </div>
+
+      <main className="flex-1 px-1 pt-4 sm:px-2">
+        <div className="mb-3 flex justify-end px-2">
+          <TrackDropdownNav tracks={uploads.map((v) => ({ id: v.id, title: v.title }))} />
+        </div>
+
         {uploads.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line-strong px-5 py-4 text-sm text-muted">
+          <p className="mx-3 rounded-xl border border-dashed border-line-strong px-5 py-4 text-sm text-muted">
             Aucune vidéo trouvée. Vérifiez que{" "}
             <code className="rounded bg-surface-strong px-1 py-0.5">YOUTUBE_API_KEY</code>{" "}
             est bien configurée, ou revenez après votre prochaine publication
             YouTube : les morceaux apparaissent ici automatiquement.
           </p>
         ) : (
-          <TrackList
-            tracks={uploads.map((video) => ({
-              ...video,
-              viewCount: videoStats.get(video.id)?.viewCount ?? null,
-            }))}
-          />
+          <div className="px-2">
+            <TrackList
+              tracks={uploads.map((video) => ({
+                ...video,
+                viewCount: videoStats.get(video.id)?.viewCount ?? null,
+              }))}
+            />
+          </div>
         )}
       </main>
 

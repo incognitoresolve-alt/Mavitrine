@@ -10,10 +10,9 @@ import type { UploadedVideo } from "@/lib/youtube";
 type Props = {
   video: UploadedVideo;
   viewCount: number | null;
-  isPlaying: boolean;
   repeat: boolean;
-  onPlay: () => void;
   onEnded?: () => void;
+  onClose: () => void;
 };
 
 function IconButton({
@@ -34,14 +33,7 @@ function IconButton({
 
   if (href) {
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={className}
-        aria-label={label}
-        title={label}
-      >
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className} aria-label={label} title={label}>
         {children}
         {feedback && <span className="text-xs">{feedback}</span>}
       </a>
@@ -49,32 +41,18 @@ function IconButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={className}
-      aria-label={label}
-      title={label}
-    >
+    <button type="button" onClick={onClick} className={className} aria-label={label} title={label}>
       {children}
       {feedback && <span className="text-xs">{feedback}</span>}
     </button>
   );
 }
 
-export default function TrackCard({
-  video,
-  viewCount,
-  isPlaying,
-  repeat,
-  onPlay,
-  onEnded,
-}: Props) {
+export default function NowPlaying({ video, viewCount, repeat, onEnded, onClose }: Props) {
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [storyFeedback, setStoryFeedback] = useState<string | null>(null);
   const onEndedRef = useRef(onEnded);
   const repeatRef = useRef(repeat);
-  const thumbnail = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
   const watchUrl = shortVideoUrl(video.id);
   const iframeId = `yt-player-${video.id}`;
 
@@ -87,7 +65,6 @@ export default function TrackCard({
   }, [repeat]);
 
   useEffect(() => {
-    if (!isPlaying) return;
     let cancelled = false;
     let player: YouTubePlayer | null = null;
 
@@ -113,7 +90,7 @@ export default function TrackCard({
       cancelled = true;
       player?.destroy();
     };
-  }, [isPlaying, iframeId]);
+  }, [video.id, iframeId]);
 
   async function handleShare() {
     const result = await shareLink({
@@ -130,68 +107,48 @@ export default function TrackCard({
   async function handleStory() {
     setStoryFeedback("…");
     const result = await shareTrackStory(video, siteConfig);
-    setStoryFeedback(
-      result === "downloaded" ? "Téléchargé" : result === "failed" ? "Échec" : null,
-    );
+    setStoryFeedback(result === "downloaded" ? "Téléchargé" : result === "failed" ? "Échec" : null);
     if (result !== "shared") {
       setTimeout(() => setStoryFeedback(null), 2000);
     }
   }
 
   return (
-    <article
-      id={`track-${video.id}`}
-      className="group flex scroll-mt-6 flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-line-strong"
+    <div
+      id="now-playing"
+      className="mb-6 scroll-mt-4 overflow-hidden rounded-2xl border border-line bg-surface"
     >
       <div className="relative aspect-video w-full bg-black">
-        {isPlaying ? (
-          <iframe
-            id={iframeId}
-            className="h-full w-full"
-            src={`https://www.youtube.com/embed/${video.id}?autoplay=1&enablejsapi=1`}
-            title={video.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={onPlay}
-            className="relative h-full w-full cursor-pointer"
-            aria-label={`Lire ${video.title}`}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={thumbnail}
-              alt={video.title}
-              className="h-full w-full object-cover transition group-hover:scale-105"
-              loading="lazy"
-            />
-            <span className="absolute inset-0 flex items-center justify-center bg-black/30 transition group-hover:bg-black/40">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 shadow-lg">
-                <svg viewBox="0 0 24 24" className="ml-1 h-6 w-6 fill-white">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </span>
-            </span>
-          </button>
-        )}
+        <iframe
+          id={iframeId}
+          className="h-full w-full"
+          src={`https://www.youtube.com/embed/${video.id}?autoplay=1&enablejsapi=1`}
+          title={video.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fermer"
+          title="Fermer"
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+            <path d="M6.4 4.98 4.98 6.4 10.59 12l-5.61 5.6 1.42 1.42L12 13.4l5.6 5.61 1.4-1.4L13.4 12l5.61-5.6-1.42-1.42L12 10.59z" />
+          </svg>
+        </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      <div className="flex flex-col gap-2 p-4">
         <h3 className="break-words font-semibold leading-snug">{video.title}</h3>
         <p className="text-xs text-faint">{formatDate(video.publishedAt)}</p>
 
-        <div className="mt-auto flex items-center justify-between pt-2 text-xs text-faint">
+        <div className="flex items-center justify-between pt-1 text-xs text-faint">
           <span title={viewCount !== null ? formatFull(viewCount) : undefined}>
             {viewCount !== null ? `${formatCompact(viewCount)} vues` : ""}
           </span>
-          <a
-            href={watchUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline-offset-2 hover:underline"
-          >
+          <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
             Voir sur YouTube
           </a>
         </div>
@@ -203,21 +160,13 @@ export default function TrackCard({
             </svg>
             <span className="text-xs">J&apos;aime</span>
           </IconButton>
-          <IconButton
-            onClick={handleShare}
-            label="Partager ce morceau"
-            feedback={shareFeedback}
-          >
+          <IconButton onClick={handleShare} label="Partager ce morceau" feedback={shareFeedback}>
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
               <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L7.04 9.81A2.99 2.99 0 0 0 5 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 3.92-2.92z" />
             </svg>
             <span className="text-xs">{shareFeedback ?? "Partager"}</span>
           </IconButton>
-          <IconButton
-            onClick={handleStory}
-            label="Partager en story"
-            feedback={storyFeedback}
-          >
+          <IconButton onClick={handleStory} label="Partager en story" feedback={storyFeedback}>
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
               <rect x="5" y="2" width="14" height="20" rx="3" strokeWidth="1.6" className="fill-none stroke-current" />
               <circle cx="12" cy="18" r="1.3" />
@@ -226,6 +175,6 @@ export default function TrackCard({
           </IconButton>
         </div>
       </div>
-    </article>
+    </div>
   );
 }

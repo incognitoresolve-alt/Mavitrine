@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import MiniPlayer from "@/components/MiniPlayer";
-import TrackCard from "@/components/TrackCard";
+import NowPlaying from "@/components/NowPlaying";
+import TrackGridItem from "@/components/TrackGridItem";
 import type { UploadedVideo } from "@/lib/youtube";
 
 type TrackWithViews = UploadedVideo & { viewCount: number | null };
@@ -35,6 +36,13 @@ export default function TrackList({ tracks }: { tracks: TrackWithViews[] }) {
   const playingIndex = sorted.findIndex((t) => t.id === playingId);
   const playingTrack = playingIndex >= 0 ? sorted[playingIndex] : null;
 
+  function selectTrack(id: string) {
+    setPlayingId(id);
+    requestAnimationFrame(() => {
+      document.getElementById("now-playing")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   function handleEnded(id: string) {
     if (!continuousPlay) return;
     const index = sorted.findIndex((t) => t.id === id);
@@ -54,7 +62,7 @@ export default function TrackList({ tracks }: { tracks: TrackWithViews[] }) {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center gap-4 text-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-4 px-1 text-sm">
         <label className="flex items-center gap-2 text-muted">
           <input
             type="checkbox"
@@ -81,17 +89,26 @@ export default function TrackList({ tracks }: { tracks: TrackWithViews[] }) {
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 pb-24 sm:grid-cols-2 lg:grid-cols-3">
+      {playingTrack && (
+        <NowPlaying
+          video={playingTrack}
+          viewCount={playingTrack.viewCount}
+          repeat={repeat}
+          onEnded={() => handleEnded(playingTrack.id)}
+          onClose={() => setPlayingId(null)}
+        />
+      )}
+
+      <div className="grid grid-cols-3 gap-0.5 pb-24 sm:gap-1">
         {sorted.map((track) => (
-          <TrackCard
-            key={track.id}
-            video={track}
-            viewCount={track.viewCount}
-            isPlaying={playingId === track.id}
-            repeat={repeat}
-            onPlay={() => setPlayingId(track.id)}
-            onEnded={() => handleEnded(track.id)}
-          />
+          <div key={track.id} id={`track-${track.id}`} className="scroll-mt-4">
+            <TrackGridItem
+              video={track}
+              viewCount={track.viewCount}
+              active={playingId === track.id}
+              onSelect={() => selectTrack(track.id)}
+            />
+          </div>
         ))}
       </div>
 
