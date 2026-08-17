@@ -92,7 +92,10 @@ export default async function Home() {
             </a>
           )}
           <ShareButton
-            target={{ title: siteConfig.name, text: siteConfig.description }}
+            target={{
+              title: siteConfig.name,
+              text: `🎧 ${siteConfig.description} Découvre tous les morceaux :`,
+            }}
             label="Partager"
             className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-strong"
           />

@@ -105,9 +105,23 @@ export default async function TrackPage({
           </div>
         </div>
 
+        {siteConfig.youtubeChannelUrl && (
+          <a
+            href={siteConfig.youtubeChannelUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-500"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            S&apos;abonner pour ne rater aucun morceau
+          </a>
+        )}
+
         <Link
           href="/"
-          className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-foreground"
+          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-foreground"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
             <path d="M20 11H7.83l4.88-4.88a1 1 0 1 0-1.42-1.41l-6.58 6.58a1 1 0 0 0 0 1.42l6.58 6.58a1 1 0 0 0 1.42-1.42L7.83 13H20a1 1 0 0 0 0-2z" />

@@ -17,7 +17,7 @@ export default function ShareButton({
   const [feedback, setFeedback] = useState<string | null>(null);
 
   async function handleClick() {
-    const result = await shareLink(target);
+    const result = await shareLink(target, "site_share");
     if (result === "copied") {
       setFeedback("Lien copié !");
       setTimeout(() => setFeedback(null), 2000);

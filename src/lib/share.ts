@@ -7,6 +7,26 @@ export type ShareTarget = {
   url?: string;
 };
 
+/**
+ * Étiquette chaque lien partagé selon son canal (bouton du site, morceau,
+ * story) pour pouvoir un jour distinguer, dans les journaux Cloudflare ou
+ * un outil d'analytics, quel canal ramène le plus de monde — sans ce
+ * marquage, impossible de savoir ce qui fonctionne pour prioriser.
+ */
+export type UtmSource = "site_share" | "track_share" | "story";
+
+function withUtm(url: string, source: UtmSource): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.set("utm_source", source);
+    u.searchParams.set("utm_medium", source === "story" ? "social" : "link");
+    u.searchParams.set("utm_campaign", "partage");
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
@@ -24,9 +44,11 @@ async function copyToClipboard(text: string): Promise<boolean> {
  */
 export async function shareLink(
   target: ShareTarget,
+  utmSource?: UtmSource,
 ): Promise<"shared" | "copied" | "failed"> {
-  const url =
+  const rawUrl =
     target.url ?? (typeof window !== "undefined" ? window.location.href : "");
+  const url = utmSource ? withUtm(rawUrl, utmSource) : rawUrl;
   const payload = { ...target, url };
 
   if (typeof navigator !== "undefined" && navigator.share) {
@@ -204,10 +226,10 @@ export async function generateStoryImage(
     titleStartY + titleLines.length * 74 + 70,
     SAFE_BOTTOM - 130,
   );
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = "30px Arial";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 32px Arial";
   ctx.fillText(
-    `▶ Extrait dès ${formatTimestamp(STORY_CLIP_START_SECONDS)}`,
+    `🎧 ÉCOUTE DÈS ${formatTimestamp(STORY_CLIP_START_SECONDS)} →`,
     STORY_WIDTH / 2,
     clipLabelY,
   );
@@ -251,7 +273,7 @@ export async function shareTrackStory(
   if (!blob) return "failed";
 
   const file = new File([blob], `${video.id}.png`, { type: "image/png" });
-  const url = siteTrackUrl(video.id, STORY_CLIP_START_SECONDS);
+  const url = withUtm(siteTrackUrl(video.id, STORY_CLIP_START_SECONDS), "story");
 
   if (
     typeof navigator !== "undefined" &&
@@ -261,7 +283,7 @@ export async function shareTrackStory(
       await navigator.share({
         files: [file],
         title: video.title,
-        text: `${video.title} — ${site.name}\n${url}`,
+        text: `🎧 ${video.title} — musique composée par IA. Écoute-la sur ${site.name} :\n${url}`,
         url,
       });
       return "shared";

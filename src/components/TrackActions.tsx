@@ -14,13 +14,11 @@ function IconButton({
   href,
   label,
   children,
-  feedback,
 }: {
   onClick?: () => void;
   href?: string;
   label: string;
   children: ReactNode;
-  feedback?: string | null;
 }) {
   const className =
     "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-muted transition hover:bg-surface-strong hover:text-foreground";
@@ -29,7 +27,6 @@ function IconButton({
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={className} aria-label={label} title={label}>
         {children}
-        {feedback && <span className="text-xs">{feedback}</span>}
       </a>
     );
   }
@@ -37,7 +34,6 @@ function IconButton({
   return (
     <button type="button" onClick={onClick} className={className} aria-label={label} title={label}>
       {children}
-      {feedback && <span className="text-xs">{feedback}</span>}
     </button>
   );
 }
@@ -50,11 +46,14 @@ export default function TrackActions({ video }: Props) {
   const watchUrl = shortVideoUrl(video.id);
 
   async function handleShare() {
-    const result = await shareLink({
-      title: video.title,
-      text: `${video.title} — ${siteConfig.name}`,
-      url: siteTrackUrl(video.id),
-    });
+    const result = await shareLink(
+      {
+        title: video.title,
+        text: `🎧 ${video.title} — musique composée par IA. Écoute-la sur ${siteConfig.name} :`,
+        url: siteTrackUrl(video.id),
+      },
+      "track_share",
+    );
     if (result === "copied") {
       setShareFeedback("Copié !");
       setTimeout(() => setShareFeedback(null), 2000);
@@ -78,13 +77,13 @@ export default function TrackActions({ video }: Props) {
         </svg>
         <span className="text-xs">J&apos;aime</span>
       </IconButton>
-      <IconButton onClick={handleShare} label="Partager ce morceau" feedback={shareFeedback}>
+      <IconButton onClick={handleShare} label="Partager ce morceau">
         <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
           <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L7.04 9.81A2.99 2.99 0 0 0 5 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 3.92-2.92z" />
         </svg>
         <span className="text-xs">{shareFeedback ?? "Partager"}</span>
       </IconButton>
-      <IconButton onClick={handleStory} label="Partager en story" feedback={storyFeedback}>
+      <IconButton onClick={handleStory} label="Partager en story">
         <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
           <rect x="5" y="2" width="14" height="20" rx="3" strokeWidth="1.6" className="fill-none stroke-current" />
           <circle cx="12" cy="18" r="1.3" />
