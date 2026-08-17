@@ -80,8 +80,7 @@ export function shortVideoUrl(videoId: string): string {
  * viole les conditions d'utilisation de YouTube (même pour ses propres
  * vidéos), et capturer l'audio d'un lecteur intégré est bloqué par les
  * règles de sécurité cross-origin. À la place, le lien de la story démarre
- * directement à ce moment de la vidéo, pour donner un extrait sans quitter
- * la plateforme YouTube.
+ * directement à ce moment de la vidéo, pour donner un extrait.
  */
 const STORY_CLIP_START_SECONDS = 30;
 
@@ -91,9 +90,16 @@ function formatTimestamp(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-/** Lien vers un morceau qui démarre directement sur l'extrait choisi. */
-export function storyVideoUrl(videoId: string): string {
-  return `${shortVideoUrl(videoId)}?t=${STORY_CLIP_START_SECONDS}`;
+/**
+ * Lien vers la page dédiée du morceau sur notre propre site (au lieu d'un
+ * lien direct vers YouTube), pour que les partages ramènent vers la
+ * vitrine — avec un aperçu Open Graph riche — plutôt que de shunter
+ * directement vers YouTube. `t` démarre la lecture à un instant précis.
+ */
+export function siteTrackUrl(videoId: string, t?: number): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const query = t ? `?t=${t}` : "";
+  return `${origin}/m/${videoId}${query}`;
 }
 
 async function loadImage(src: string): Promise<HTMLImageElement> {
@@ -206,7 +212,7 @@ export async function generateStoryImage(
     clipLabelY,
   );
 
-  const url = shortVideoUrl(video.id).replace(/^https?:\/\//, "");
+  const url = siteTrackUrl(video.id).replace(/^https?:\/\//, "");
   ctx.font = "bold 36px Arial";
   const urlWidth = ctx.measureText(url).width;
   const pillPaddingX = 40;
@@ -245,7 +251,7 @@ export async function shareTrackStory(
   if (!blob) return "failed";
 
   const file = new File([blob], `${video.id}.png`, { type: "image/png" });
-  const url = storyVideoUrl(video.id);
+  const url = siteTrackUrl(video.id, STORY_CLIP_START_SECONDS);
 
   if (
     typeof navigator !== "undefined" &&

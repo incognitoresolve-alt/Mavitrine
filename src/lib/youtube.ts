@@ -180,3 +180,44 @@ export async function getVideoStats(
 
   return results;
 }
+
+export type VideoInfo = UploadedVideo & {
+  viewCount: number;
+  durationSeconds: number;
+};
+
+/**
+ * Récupère titre, date et statistiques d'une seule vidéo à partir de son
+ * ID — utilisé par les pages individuelles de morceau (/m/[id]), pour
+ * générer les métadonnées Open Graph et afficher le lecteur sans avoir à
+ * recharger toute la liste des vidéos de la chaîne. Renvoie `null` si la
+ * clé API n'est pas configurée, si la vidéo n'existe pas, ou en cas
+ * d'erreur.
+ */
+export async function getVideoInfo(videoId: string): Promise<VideoInfo | null> {
+  if (!process.env.YOUTUBE_API_KEY) return null;
+
+  const url = new URL(`${API_BASE}/videos`);
+  url.searchParams.set("part", "snippet,statistics,contentDetails");
+  url.searchParams.set("id", videoId);
+  url.searchParams.set("key", process.env.YOUTUBE_API_KEY);
+
+  try {
+    const res = await fetch(url, { next: { revalidate: 600 } });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const item = data.items?.[0];
+    if (!item) return null;
+
+    return {
+      id: item.id,
+      title: item.snippet?.title ?? "",
+      publishedAt: item.snippet?.publishedAt ?? "",
+      viewCount: Number(item.statistics?.viewCount ?? 0),
+      durationSeconds: parseIsoDuration(item.contentDetails?.duration),
+    };
+  } catch {
+    return null;
+  }
+}
