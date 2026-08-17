@@ -4,7 +4,12 @@ import ThemeToggle from "@/components/ThemeToggle";
 import TrackDropdownNav from "@/components/TrackDropdownNav";
 import TrackList from "@/components/TrackList";
 import { siteConfig } from "@/lib/config";
-import { getChannelStats, getChannelUploads, getVideoStats } from "@/lib/youtube";
+import {
+  getChannelStats,
+  getChannelUploads,
+  getVideoStats,
+  isShortDuration,
+} from "@/lib/youtube";
 
 // Rendu à chaque requête plutôt que figé au moment du build : les secrets
 // Cloudflare (YOUTUBE_API_KEY) ne sont garantis disponibles qu'à l'exécution
@@ -13,11 +18,16 @@ import { getChannelStats, getChannelUploads, getVideoStats } from "@/lib/youtube
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const uploads = await getChannelUploads();
+  const allUploads = await getChannelUploads();
   const [channelStats, videoStats] = await Promise.all([
     getChannelStats(),
-    getVideoStats(uploads.map((v) => v.id)),
+    getVideoStats(allUploads.map((v) => v.id)),
   ]);
+
+  // Les Shorts ne sont pas des morceaux complets : on ne les affiche pas.
+  const uploads = allUploads.filter(
+    (v) => !isShortDuration(videoStats.get(v.id)?.durationSeconds ?? 0),
+  );
 
   const handle = siteConfig.youtubeChannelUrl.replace(/^https?:\/\/(www\.)?/, "");
 

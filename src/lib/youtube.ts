@@ -15,6 +15,7 @@ export type VideoStats = {
   id: string;
   viewCount: number;
   likeCount: number | null;
+  durationSeconds: number;
 };
 
 export type UploadedVideo = {
@@ -123,9 +124,28 @@ export async function getChannelUploads(
   }
 }
 
+/** Convertit une durée ISO 8601 (ex: "PT1M30S") en secondes. */
+function parseIsoDuration(iso: string | undefined): number {
+  if (!iso) return 0;
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso);
+  if (!match) return 0;
+  const [, h, m, s] = match;
+  return Number(h ?? 0) * 3600 + Number(m ?? 0) * 60 + Number(s ?? 0);
+}
+
 /**
- * Récupère le nombre de vues / likes pour une liste d'IDs de vidéos YouTube.
- * Renvoie une Map vide si la clé API n'est pas configurée ou en cas d'erreur.
+ * L'API YouTube ne signale pas explicitement qu'une vidéo est un Short : on
+ * utilise la convention courante (≤ 60 secondes) pour les filtrer de la
+ * vitrine, qui n'a vocation à montrer que les morceaux complets.
+ */
+export function isShortDuration(durationSeconds: number): boolean {
+  return durationSeconds > 0 && durationSeconds <= 60;
+}
+
+/**
+ * Récupère le nombre de vues / likes / la durée pour une liste d'IDs de
+ * vidéos YouTube. Renvoie une Map vide si la clé API n'est pas configurée
+ * ou en cas d'erreur.
  */
 export async function getVideoStats(
   videoIds: string[],
@@ -134,7 +154,7 @@ export async function getVideoStats(
   if (!process.env.YOUTUBE_API_KEY || videoIds.length === 0) return results;
 
   const url = new URL(`${API_BASE}/videos`);
-  url.searchParams.set("part", "statistics");
+  url.searchParams.set("part", "statistics,contentDetails");
   url.searchParams.set("id", videoIds.join(","));
   url.searchParams.set("key", process.env.YOUTUBE_API_KEY);
 
@@ -151,6 +171,7 @@ export async function getVideoStats(
           item.statistics?.likeCount !== undefined
             ? Number(item.statistics.likeCount)
             : null,
+        durationSeconds: parseIsoDuration(item.contentDetails?.duration),
       });
     }
   } catch {
