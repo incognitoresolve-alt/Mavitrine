@@ -73,6 +73,16 @@ export default async function TrackPage({
     startSeconds ? `&start=${startSeconds}` : ""
   }`;
 
+  const origin = await requestOrigin();
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: siteConfig.name, item: origin || undefined },
+      { "@type": "ListItem", position: 2, name: video.title },
+    ],
+  };
+
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-1 flex-col bg-background text-foreground">
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -82,7 +92,22 @@ export default async function TrackPage({
         <ThemeToggle />
       </div>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
+      />
+
       <main className="flex-1 p-4 sm:p-6">
+        <nav aria-label="Fil d'Ariane" className="mb-3 flex items-center gap-1.5 text-xs text-faint">
+          <Link href="/" className="hover:text-foreground hover:underline">
+            {siteConfig.name}
+          </Link>
+          <span aria-hidden="true">/</span>
+          <span className="truncate text-muted" title={video.title}>
+            {video.title}
+          </span>
+        </nav>
+
         <div className="overflow-hidden rounded-2xl border border-line bg-surface">
           <div className="aspect-video w-full bg-black">
             <iframe

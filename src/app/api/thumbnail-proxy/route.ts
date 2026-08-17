@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const VIDEO_ID_PATTERN = /^[\w-]{6,15}$/;
+// Les IDs de vidéo YouTube font toujours exactement 11 caractères.
+const VIDEO_ID_PATTERN = /^[\w-]{11}$/;
 
 /**
  * Sert une vignette YouTube depuis notre propre origine, pour pouvoir la

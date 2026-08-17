@@ -12,4 +12,8 @@ export const siteConfig = {
     process.env.YOUTUBE_CHANNEL_ID || "UCO7zj3S4D0TyHZPMR2_kMFg",
   youtubeChannelUrl:
     process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_URL || "https://youtube.com/@bprodb",
+  // URL publique du site déployé (ex: https://mavitrine.example.com), utilisée
+  // pour résoudre les images Open Graph en absolu. Sans elle, Next.js retombe
+  // sur "http://localhost:3000" dans les balises sociales en production.
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || undefined,
 };

@@ -31,6 +31,44 @@ export default async function Home() {
 
   const handle = siteConfig.youtubeChannelUrl.replace(/^https?:\/\/(www\.)?/, "");
 
+  const faqs = [
+    {
+      question: "Comment les morceaux apparaissent-ils sur ce site ?",
+      answer:
+        "Automatiquement : dès qu'un nouveau morceau est publié sur la chaîne YouTube, il apparaît ici sans intervention manuelle.",
+    },
+    {
+      question: "Les musiques sont-elles vraiment composées par IA ?",
+      answer:
+        "Oui, chaque morceau présenté sur ce site est généré par intelligence artificielle.",
+    },
+    {
+      question: "Les statistiques (vues, abonnés) sont-elles à jour ?",
+      answer:
+        "Elles proviennent directement de l'API YouTube et sont rafraîchies régulièrement, avec un léger délai de mise en cache.",
+    },
+    {
+      question: "Puis-je écouter les morceaux ailleurs que sur ce site ?",
+      answer:
+        "Oui, chaque morceau reste disponible sur YouTube via le bouton « J'aime sur YouTube » ou le lien de partage.",
+    },
+    {
+      question: "Comment soutenir la chaîne ?",
+      answer:
+        "Le plus simple est de s'abonner sur YouTube et de partager vos morceaux préférés autour de vous.",
+    },
+  ];
+
+  const faqStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+    })),
+  };
+
   return (
     <div className="mx-auto flex min-h-full max-w-3xl flex-1 flex-col bg-background text-foreground">
       {/* Barre du haut, façon barre de profil Instagram */}
@@ -135,6 +173,23 @@ export default async function Home() {
           </div>
         )}
       </main>
+
+      <section className="border-t border-line px-4 py-8 sm:px-6">
+        <h2 className="mb-4 text-lg font-bold">Questions fréquentes</h2>
+        <dl className="flex flex-col gap-4">
+          {faqs.map((faq) => (
+            <div key={faq.question}>
+              <dt className="text-sm font-semibold">{faq.question}</dt>
+              <dd className="mt-1 text-sm text-muted">{faq.answer}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
 
       <footer className="border-t border-line px-6 py-8 text-center text-sm text-faint">
         <p>

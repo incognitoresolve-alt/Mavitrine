@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: siteConfig.siteUrl ? new URL(siteConfig.siteUrl) : undefined,
   title: `${siteConfig.name} — ${siteConfig.tagline}`,
   description: siteConfig.description,
   openGraph: {
@@ -27,6 +28,28 @@ export const metadata: Metadata = {
     title: siteConfig.name,
     description: siteConfig.description,
   },
+};
+
+/**
+ * Balisage Schema.org (JSON-LD) : aide les moteurs de recherche à comprendre
+ * qu'il s'agit du site d'un créateur musical, relié à sa chaîne YouTube.
+ * Uniquement des données déjà publiques (siteConfig), rien d'inventé.
+ */
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      name: siteConfig.name,
+      description: siteConfig.description,
+    },
+    {
+      "@type": "Person",
+      name: siteConfig.name,
+      description: siteConfig.tagline,
+      sameAs: [siteConfig.youtubeChannelUrl],
+    },
+  ],
 };
 
 const THEME_INIT_SCRIPT = `
@@ -45,6 +68,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+        />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
