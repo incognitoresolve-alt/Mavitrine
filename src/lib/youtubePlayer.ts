@@ -2,6 +2,9 @@ export type YouTubePlayer = {
   destroy: () => void;
   seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
   playVideo: () => void;
+  unMute: () => void;
+  mute: () => void;
+  isMuted: () => boolean;
 };
 
 declare global {
@@ -11,6 +14,7 @@ declare global {
         elementId: string,
         options: {
           events?: {
+            onReady?: (event: { target: YouTubePlayer }) => void;
             onStateChange?: (event: { data: number }) => void;
           };
         },

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import TrackActions from "@/components/TrackActions";
 import ThemeToggle from "@/components/ThemeToggle";
+import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { formatCompact, formatDate, formatFull } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
 import { getVideoInfo } from "@/lib/youtube";
@@ -69,9 +70,6 @@ export default async function TrackPage({
   if (!video) notFound();
 
   const startSeconds = t ? Number(t) : undefined;
-  const embedSrc = `https://www.youtube.com/embed/${id}?autoplay=1${
-    startSeconds ? `&start=${startSeconds}` : ""
-  }`;
 
   const origin = await requestOrigin();
   const breadcrumbStructuredData = {
@@ -109,15 +107,7 @@ export default async function TrackPage({
         </nav>
 
         <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-          <div className="aspect-video w-full bg-black">
-            <iframe
-              className="h-full w-full"
-              src={embedSrc}
-              title={video.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
+          <YouTubeEmbed key={id} videoId={id} title={video.title} start={startSeconds} />
 
           <div className="flex flex-col gap-2 p-4">
             <h1 className="break-words text-lg font-semibold leading-snug">{video.title}</h1>
