@@ -74,6 +74,28 @@ export function shortVideoUrl(videoId: string): string {
   return `https://youtu.be/${videoId}`;
 }
 
+/**
+ * On ne peut pas extraire 15 secondes du fichier audio/vidéo réel d'une
+ * vidéo YouTube : ce serait un téléchargement automatisé du contenu, qui
+ * viole les conditions d'utilisation de YouTube (même pour ses propres
+ * vidéos), et capturer l'audio d'un lecteur intégré est bloqué par les
+ * règles de sécurité cross-origin. À la place, le lien de la story démarre
+ * directement à ce moment de la vidéo, pour donner un extrait sans quitter
+ * la plateforme YouTube.
+ */
+const STORY_CLIP_START_SECONDS = 30;
+
+function formatTimestamp(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Lien vers un morceau qui démarre directement sur l'extrait choisi. */
+export function storyVideoUrl(videoId: string): string {
+  return `${shortVideoUrl(videoId)}?t=${STORY_CLIP_START_SECONDS}`;
+}
+
 async function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -135,6 +157,14 @@ export async function generateStoryImage(
     ctx.fillText(line, STORY_WIDTH / 2, titleStartY + i * 76);
   });
 
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.font = "32px Arial";
+  ctx.fillText(
+    `▶ Extrait dès ${formatTimestamp(STORY_CLIP_START_SECONDS)}`,
+    STORY_WIDTH / 2,
+    STORY_HEIGHT - 250,
+  );
+
   const url = shortVideoUrl(video.id).replace(/^https?:\/\//, "");
   ctx.font = "bold 38px Arial";
   const urlWidth = ctx.measureText(url).width;
@@ -174,7 +204,7 @@ export async function shareTrackStory(
   if (!blob) return "failed";
 
   const file = new File([blob], `${video.id}.png`, { type: "image/png" });
-  const url = shortVideoUrl(video.id);
+  const url = storyVideoUrl(video.id);
 
   if (
     typeof navigator !== "undefined" &&
