@@ -106,10 +106,34 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Génère une image verticale (format story, 1080x1920) pour un morceau :
- * vignette YouTube + titre + branding du site. La vignette est chargée via
- * notre proxy interne (/api/thumbnail-proxy) pour éviter de "tainter" le
- * canvas (i.ytimg.com n'envoie pas d'en-têtes CORS permissifs).
+ * Instagram (et Snapchat/TikTok) recouvrent le haut et le bas d'une story
+ * avec leur propre interface (profil, réponse, stickers) : tout le contenu
+ * essentiel doit rester dans cette "zone sûre" pour ne jamais être masqué.
+ * Repères officiels ~250px en haut / ~250px en bas sur une image 1080x1920.
+ */
+const SAFE_TOP = 260;
+const SAFE_BOTTOM = STORY_HEIGHT - 300;
+
+function roundedClip(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.clip();
+}
+
+/**
+ * Génère une image verticale (format story Instagram/Snapchat, 1080x1920)
+ * pour un morceau : vignette YouTube + titre + branding du site, avec tout
+ * le texte contenu dans la zone sûre (non recouverte par l'UI d'Instagram).
+ * La vignette est chargée via notre proxy interne (/api/thumbnail-proxy)
+ * pour éviter de "tainter" le canvas (i.ytimg.com n'envoie pas d'en-têtes
+ * CORS permissifs).
  */
 export async function generateStoryImage(
   video: UploadedVideo,
@@ -122,59 +146,76 @@ export async function generateStoryImage(
   if (!ctx) return null;
 
   const bg = ctx.createLinearGradient(0, 0, 0, STORY_HEIGHT);
-  bg.addColorStop(0, "#0a0a0a");
-  bg.addColorStop(1, "#171717");
+  bg.addColorStop(0, "#171717");
+  bg.addColorStop(1, "#0a0a0a");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
 
+  const thumbTop = SAFE_TOP;
+  const thumbHeight = STORY_WIDTH * (9 / 16) - 40;
+
   try {
     const img = await loadImage(`/api/thumbnail-proxy?id=${video.id}`);
-    const thumbTop = 220;
-    const thumbHeight = STORY_WIDTH * (9 / 16);
-    const scale = Math.max(STORY_WIDTH / img.width, thumbHeight / img.height);
-    const sw = STORY_WIDTH / scale;
+    const scale = Math.max(
+      (STORY_WIDTH - 40) / img.width,
+      thumbHeight / img.height,
+    );
+    const sw = (STORY_WIDTH - 40) / scale;
     const sh = thumbHeight / scale;
     const sx = (img.width - sw) / 2;
     const sy = (img.height - sh) / 2;
-    ctx.drawImage(img, sx, sy, sw, sh, 0, thumbTop, STORY_WIDTH, thumbHeight);
 
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(0, thumbTop, STORY_WIDTH, thumbHeight);
+    ctx.save();
+    roundedClip(ctx, 20, thumbTop, STORY_WIDTH - 40, thumbHeight, 32);
+    ctx.drawImage(img, sx, sy, sw, sh, 20, thumbTop, STORY_WIDTH - 40, thumbHeight);
+    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.fillRect(20, thumbTop, STORY_WIDTH - 40, thumbHeight);
+    ctx.restore();
   } catch {
-    // Pas de vignette disponible : on garde le fond dégradé seul.
+    // Pas de vignette disponible : un cadre discret marque quand même la zone.
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(20, thumbTop, STORY_WIDTH - 40, thumbHeight, 32);
+    ctx.stroke();
   }
 
   ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.font = "600 34px Arial";
-  ctx.fillText(site.tagline.toUpperCase(), STORY_WIDTH / 2, 130);
+  const taglineY = thumbTop + thumbHeight + 70;
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "600 32px Arial";
+  ctx.fillText(site.tagline.toUpperCase(), STORY_WIDTH / 2, taglineY);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 64px Arial";
-  const titleLines = wrapText(ctx, video.title, STORY_WIDTH - 140).slice(0, 4);
-  const titleStartY = 1350;
+  ctx.font = "bold 62px Arial";
+  const titleLines = wrapText(ctx, video.title, STORY_WIDTH - 140).slice(0, 3);
+  const titleStartY = taglineY + 90;
   titleLines.forEach((line, i) => {
-    ctx.fillText(line, STORY_WIDTH / 2, titleStartY + i * 76);
+    ctx.fillText(line, STORY_WIDTH / 2, titleStartY + i * 74);
   });
 
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = "32px Arial";
+  const clipLabelY = Math.min(
+    titleStartY + titleLines.length * 74 + 70,
+    SAFE_BOTTOM - 130,
+  );
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "30px Arial";
   ctx.fillText(
     `▶ Extrait dès ${formatTimestamp(STORY_CLIP_START_SECONDS)}`,
     STORY_WIDTH / 2,
-    STORY_HEIGHT - 250,
+    clipLabelY,
   );
 
   const url = shortVideoUrl(video.id).replace(/^https?:\/\//, "");
-  ctx.font = "bold 38px Arial";
+  ctx.font = "bold 36px Arial";
   const urlWidth = ctx.measureText(url).width;
-  const pillPaddingX = 36;
-  const pillHeight = 68;
-  const pillY = STORY_HEIGHT - 190;
+  const pillPaddingX = 40;
+  const pillHeight = 72;
+  const pillY = Math.min(clipLabelY + 74, SAFE_BOTTOM - 40);
   const pillX = STORY_WIDTH / 2 - urlWidth / 2 - pillPaddingX;
   const pillW = urlWidth + pillPaddingX * 2;
 
-  ctx.fillStyle = "rgba(255,255,255,0.15)";
+  ctx.fillStyle = "#dc2626";
   ctx.beginPath();
   ctx.roundRect(pillX, pillY - pillHeight / 2, pillW, pillHeight, pillHeight / 2);
   ctx.fill();
@@ -182,9 +223,9 @@ export async function generateStoryImage(
   ctx.fillStyle = "#ffffff";
   ctx.fillText(url, STORY_WIDTH / 2, pillY + 13);
 
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = "40px Arial";
-  ctx.fillText(site.name, STORY_WIDTH / 2, STORY_HEIGHT - 90);
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.font = "36px Arial";
+  ctx.fillText(site.name, STORY_WIDTH / 2, Math.min(pillY + 90, SAFE_BOTTOM));
 
   return new Promise((resolve) => {
     canvas.toBlob((blob) => resolve(blob), "image/png");

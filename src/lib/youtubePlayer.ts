@@ -1,3 +1,9 @@
+export type YouTubePlayer = {
+  destroy: () => void;
+  seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
+  playVideo: () => void;
+};
+
 declare global {
   interface Window {
     YT?: {
@@ -8,7 +14,7 @@ declare global {
             onStateChange?: (event: { data: number }) => void;
           };
         },
-      ) => { destroy: () => void };
+      ) => YouTubePlayer;
       PlayerState: { ENDED: number };
     };
     onYouTubeIframeAPIReady?: () => void;

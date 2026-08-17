@@ -4,13 +4,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatCompact, formatDate, formatFull } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
 import { shareLink, shareTrackStory, shortVideoUrl } from "@/lib/share";
-import { loadYouTubeIframeApi } from "@/lib/youtubePlayer";
+import { loadYouTubeIframeApi, type YouTubePlayer } from "@/lib/youtubePlayer";
 import type { UploadedVideo } from "@/lib/youtube";
 
 type Props = {
   video: UploadedVideo;
   viewCount: number | null;
   isPlaying: boolean;
+  repeat: boolean;
   onPlay: () => void;
   onEnded?: () => void;
 };
@@ -65,12 +66,14 @@ export default function TrackCard({
   video,
   viewCount,
   isPlaying,
+  repeat,
   onPlay,
   onEnded,
 }: Props) {
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [storyFeedback, setStoryFeedback] = useState<string | null>(null);
   const onEndedRef = useRef(onEnded);
+  const repeatRef = useRef(repeat);
   const thumbnail = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
   const watchUrl = shortVideoUrl(video.id);
   const iframeId = `yt-player-${video.id}`;
@@ -80,9 +83,13 @@ export default function TrackCard({
   }, [onEnded]);
 
   useEffect(() => {
+    repeatRef.current = repeat;
+  }, [repeat]);
+
+  useEffect(() => {
     if (!isPlaying) return;
     let cancelled = false;
-    let player: { destroy: () => void } | null = null;
+    let player: YouTubePlayer | null = null;
 
     loadYouTubeIframeApi().then(() => {
       if (cancelled || !window.YT) return;
@@ -90,7 +97,12 @@ export default function TrackCard({
         events: {
           onStateChange: (event) => {
             if (event.data === window.YT!.PlayerState.ENDED) {
-              onEndedRef.current?.();
+              if (repeatRef.current) {
+                player?.seekTo(0, true);
+                player?.playVideo();
+              } else {
+                onEndedRef.current?.();
+              }
             }
           },
         },
