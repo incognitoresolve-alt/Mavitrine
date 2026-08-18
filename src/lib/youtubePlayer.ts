@@ -5,7 +5,15 @@ export type YouTubePlayer = {
   unMute: () => void;
   mute: () => void;
   isMuted: () => boolean;
+  getPlayerState: () => number;
 };
+
+// Codes d'état stables de l'API YouTube IFrame (non exposés comme constantes
+// nommées pour tous, donc redéclarés ici).
+export const YT_PLAYER_STATE = {
+  PLAYING: 1,
+  BUFFERING: 3,
+} as const;
 
 declare global {
   interface Window {

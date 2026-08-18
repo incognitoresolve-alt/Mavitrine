@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { loadYouTubeIframeApi, type YouTubePlayer } from "@/lib/youtubePlayer";
+import { loadYouTubeIframeApi, YT_PLAYER_STATE, type YouTubePlayer } from "@/lib/youtubePlayer";
 
 type Props = {
   videoId: string;
@@ -20,16 +20,25 @@ type Props = {
 // indéfiniment et on propose d'ouvrir directement sur YouTube.
 const READY_TIMEOUT_MS = 7000;
 
+// Délai laissé au lecteur pour démarrer avec le son avant de considérer que
+// le navigateur a bloqué l'autoplay sonore et de basculer en muet.
+const AUTOPLAY_SOUND_CHECK_MS = 1500;
+
 /**
- * Lecteur YouTube embarqué, fiable dans les navigateurs intégrés (Instagram,
- * TikTok...) : l'autoplay se fait muet puis un appel explicite `playVideo()`
- * relance la lecture (plus fiable que compter uniquement sur `autoplay=1`
- * dans l'URL, souvent ignoré par ces navigateurs). Affiche la vignette en
- * fond pendant le chargement (jamais d'écran noir) et une porte de sortie
- * vers YouTube si le lecteur ne démarre toujours pas après quelques secondes.
+ * Lecteur YouTube embarqué : tente de démarrer avec le son (le clic de
+ * l'utilisateur qui a sélectionné ce morceau sert de geste autorisant
+ * l'autoplay sonore dans la plupart des navigateurs), puis vérifie peu après
+ * si la lecture a réellement démarré. Si le son a été bloqué (fréquent dans
+ * les navigateurs intégrés comme Instagram/TikTok), on repasse en muet
+ * automatiquement — sans quoi le lecteur resterait figé en silence sans
+ * qu'on le sache. Un bouton permet de réactiver le son en un tap.
+ *
+ * Affiche la vignette en fond pendant le chargement (jamais d'écran noir) et
+ * une porte de sortie vers YouTube si le lecteur ne démarre toujours pas
+ * après quelques secondes.
  *
  * Le composant doit être monté avec `key={videoId}` par l'appelant : un
- * changement de morceau doit repartir d'un état propre (chargement, muet),
+ * changement de morceau doit repartir d'un état propre (chargement, son),
  * ce qu'un remount garantit nativement plutôt qu'un `useEffect` de reset.
  */
 export default function YouTubeEmbed({
@@ -48,7 +57,7 @@ export default function YouTubeEmbed({
   const watchUrl = `https://youtu.be/${videoId}`;
 
   const [status, setStatus] = useState<"loading" | "ready" | "timeout">("loading");
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
 
   useEffect(() => {
@@ -83,6 +92,20 @@ export default function YouTubeEmbed({
             // uniquement par un paramètre d'URL.
             event.target.playVideo();
             setStatus("ready");
+
+            window.setTimeout(() => {
+              if (cancelled) return;
+              const state = playerRef.current?.getPlayerState();
+              const isActuallyPlaying =
+                state === YT_PLAYER_STATE.PLAYING || state === YT_PLAYER_STATE.BUFFERING;
+              if (!isActuallyPlaying) {
+                // Le son a été bloqué par le navigateur : on relance en muet
+                // plutôt que de laisser le lecteur figé en silence.
+                playerRef.current?.mute();
+                playerRef.current?.playVideo();
+                setMuted(true);
+              }
+            }, AUTOPLAY_SOUND_CHECK_MS);
           },
           onStateChange: (event) => {
             if (event.data === window.YT!.PlayerState.ENDED) {
@@ -126,7 +149,7 @@ export default function YouTubeEmbed({
         className={`absolute inset-0 h-full w-full transition-opacity duration-300 ${
           status === "ready" ? "opacity-100" : "opacity-0"
         }`}
-        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1&enablejsapi=1${
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&enablejsapi=1${
           start ? `&start=${start}` : ""
         }`}
         title={title}
