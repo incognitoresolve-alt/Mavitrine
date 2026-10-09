@@ -1,25 +1,14 @@
 import type { UploadedVideo } from "@/lib/youtube";
 
-export type ShareTarget = {
-  title: string;
-  text?: string;
-  /** Si omise, utilise l'URL de la page actuelle. */
-  url?: string;
-};
-
 /**
- * Étiquette chaque lien partagé selon son canal (bouton du site, morceau,
- * story) pour pouvoir un jour distinguer, dans les journaux Cloudflare ou
- * un outil d'analytics, quel canal ramène le plus de monde — sans ce
- * marquage, impossible de savoir ce qui fonctionne pour prioriser.
+ * Étiquette les liens partagés en story pour pouvoir mesurer, dans les
+ * journaux Cloudflare ou un outil d'analytics, ce que ce canal ramène.
  */
-export type UtmSource = "site_share" | "track_share" | "story";
-
-function withUtm(url: string, source: UtmSource): string {
+function withStoryUtm(url: string): string {
   try {
     const u = new URL(url);
-    u.searchParams.set("utm_source", source);
-    u.searchParams.set("utm_medium", source === "story" ? "social" : "link");
+    u.searchParams.set("utm_source", "story");
+    u.searchParams.set("utm_medium", "social");
     u.searchParams.set("utm_campaign", "partage");
     return u.toString();
   } catch {
@@ -34,36 +23,6 @@ async function copyToClipboard(text: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Partage un lien via la feuille de partage native (mobile), ou copie
- * l'URL dans le presse-papiers en repli (desktop / navigateurs non
- * compatibles). Renvoie comment le partage s'est déroulé, pour afficher un
- * message adapté ("copié !" par exemple).
- */
-export async function shareLink(
-  target: ShareTarget,
-  utmSource?: UtmSource,
-): Promise<"shared" | "copied" | "failed"> {
-  const rawUrl =
-    target.url ?? (typeof window !== "undefined" ? window.location.href : "");
-  const url = utmSource ? withUtm(rawUrl, utmSource) : rawUrl;
-  const payload = { ...target, url };
-
-  if (typeof navigator !== "undefined" && navigator.share) {
-    try {
-      await navigator.share(payload);
-      return "shared";
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        return "shared";
-      }
-      // Repli sur la copie si le partage natif échoue pour une autre raison.
-    }
-  }
-
-  return (await copyToClipboard(url)) ? "copied" : "failed";
 }
 
 const STORY_WIDTH = 1080;
@@ -167,6 +126,10 @@ export async function generateStoryImage(
   video: UploadedVideo,
   site: { name: string; tagline: string },
 ): Promise<Blob | null> {
+  // Sans attendre les polices, le premier rendu canvas peut utiliser une
+  // police de repli et décaler le texte.
+  await document.fonts?.ready;
+
   const canvas = document.createElement("canvas");
   canvas.width = STORY_WIDTH;
   canvas.height = STORY_HEIGHT;
@@ -256,51 +219,86 @@ export async function generateStoryImage(
   ctx.fillText(site.name, STORY_WIDTH / 2, Math.min(pillY + 90, SAFE_BOTTOM));
 
   return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), "image/png");
+    canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.92);
   });
 }
 
+const storyCache = new Map<string, Promise<File | null>>();
+
+/**
+ * Génère (une seule fois par morceau) le fichier image de la story. À
+ * appeler dès l'affichage du morceau : `navigator.share` exige un geste
+ * utilisateur récent, et générer l'image après le clic (chargement de la
+ * vignette + rendu canvas) peut dépasser ce délai sur mobile et faire
+ * échouer le partage.
+ */
+export function prepareTrackStory(
+  video: UploadedVideo,
+  site: { name: string; tagline: string },
+): Promise<File | null> {
+  let pending = storyCache.get(video.id);
+  if (!pending) {
+    pending = generateStoryImage(video, site)
+      .then((blob) =>
+        blob ? new File([blob], `${video.id}-story.jpg`, { type: "image/jpeg" }) : null,
+      )
+      .catch(() => null);
+    // Un échec ne doit pas rester en cache : on réessaiera au prochain clic.
+    pending.then((file) => {
+      if (!file) storyCache.delete(video.id);
+    });
+    storyCache.set(video.id, pending);
+  }
+  return pending;
+}
+
+export type StoryShareResult = {
+  outcome: "shared" | "cancelled" | "downloaded" | "failed";
+  /** Lien du morceau copié, à coller en sticker "Lien" dans la story. */
+  linkCopied: boolean;
+};
+
 /**
  * Partage l'image "story" d'un morceau via la feuille de partage native
- * (qui propose Instagram/Snapchat/WhatsApp Story sur mobile). Sans support
- * du partage de fichiers, l'image est simplement téléchargée.
+ * (Instagram/Snapchat/WhatsApp Story sur mobile).
+ *
+ * - Seul le fichier est partagé : Instagram et d'autres apps ignorent ou
+ *   refusent un partage qui mélange image + texte/lien.
+ * - Le lien (avec instant de départ et UTM) est copié dans le presse-papiers
+ *   juste avant, pour être collé en sticker "Lien" dans la story.
+ * - Sans partage de fichiers (desktop), l'image est téléchargée.
  */
 export async function shareTrackStory(
   video: UploadedVideo,
   site: { name: string; tagline: string },
-): Promise<"shared" | "downloaded" | "failed"> {
-  const blob = await generateStoryImage(video, site);
-  if (!blob) return "failed";
+): Promise<StoryShareResult> {
+  const url = withStoryUtm(siteTrackUrl(video.id, STORY_CLIP_START_SECONDS));
+  const [file, linkCopied] = await Promise.all([
+    prepareTrackStory(video, site),
+    copyToClipboard(url),
+  ]);
+  if (!file) return { outcome: "failed", linkCopied };
 
-  const file = new File([blob], `${video.id}.png`, { type: "image/png" });
-  const url = withUtm(siteTrackUrl(video.id, STORY_CLIP_START_SECONDS), "story");
-
-  if (
-    typeof navigator !== "undefined" &&
-    navigator.canShare?.({ files: [file] })
-  ) {
+  if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({
-        files: [file],
-        title: video.title,
-        text: `🎧 ${video.title} — musique composée par IA. Écoute-la sur ${site.name} :\n${url}`,
-        url,
-      });
-      return "shared";
+      await navigator.share({ files: [file], title: video.title });
+      return { outcome: "shared", linkCopied };
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        return "shared";
+        return { outcome: "cancelled", linkCopied };
       }
+      // Autre échec (geste expiré, app refusant le fichier) : téléchargement.
     }
   }
 
-  const objectUrl = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(file);
   const a = document.createElement("a");
   a.href = objectUrl;
-  a.download = `${video.title.replace(/[^\w-]+/g, "-")}.png`;
+  a.download = `${video.title.replace(/[^\w-]+/g, "-")}.jpg`;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(objectUrl);
-  return "downloaded";
+  // Laisse au navigateur le temps de démarrer le téléchargement.
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  return { outcome: "downloaded", linkCopied };
 }

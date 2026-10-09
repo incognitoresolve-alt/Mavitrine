@@ -5,6 +5,7 @@ export type YouTubePlayer = {
   unMute: () => void;
   mute: () => void;
   setVolume: (volume: number) => void;
+  loadVideoById: (options: { videoId: string; startSeconds?: number }) => void;
   isMuted: () => boolean;
   getPlayerState: () => number;
 };
@@ -12,6 +13,7 @@ export type YouTubePlayer = {
 // Codes d'état stables de l'API YouTube IFrame (non exposés comme constantes
 // nommées pour tous, donc redéclarés ici).
 export const YT_PLAYER_STATE = {
+  ENDED: 0,
   PLAYING: 1,
   BUFFERING: 3,
 } as const;
@@ -25,6 +27,7 @@ declare global {
           events?: {
             onReady?: (event: { target: YouTubePlayer }) => void;
             onStateChange?: (event: { data: number }) => void;
+            onError?: (event: { data: number }) => void;
           };
         },
       ) => YouTubePlayer;

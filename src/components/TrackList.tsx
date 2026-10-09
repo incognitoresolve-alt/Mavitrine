@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MiniPlayer from "@/components/MiniPlayer";
 import NowPlaying from "@/components/NowPlaying";
 import TrackGridItem from "@/components/TrackGridItem";
 import type { UploadedVideo } from "@/lib/youtube";
+import { loadYouTubeIframeApi } from "@/lib/youtubePlayer";
 
 type TrackWithViews = UploadedVideo & { viewCount: number | null };
 type SortKey = "recent" | "views" | "alpha";
@@ -20,6 +21,19 @@ export default function TrackList({ tracks }: { tracks: TrackWithViews[] }) {
   const [continuousPlay, setContinuousPlay] = useState(true);
   const [repeat, setRepeat] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // Précharge l'API YouTube dès que le navigateur est libre : au clic sur un
+  // titre, le lecteur est prêt plus vite et le geste de l'utilisateur est
+  // encore valable pour démarrer avec le son.
+  useEffect(() => {
+    const preload = () => void loadYouTubeIframeApi();
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(preload, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(preload, 1500);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const sorted = useMemo(() => {
     const copy = [...tracks];
@@ -48,6 +62,13 @@ export default function TrackList({ tracks }: { tracks: TrackWithViews[] }) {
     const index = sorted.findIndex((t) => t.id === id);
     const next = sorted[index + 1];
     setPlayingId(next ? next.id : null);
+  }
+
+  // Morceau illisible : on passe au suivant même sans lecture continue.
+  function handleError(id: string) {
+    const index = sorted.findIndex((t) => t.id === id);
+    const next = sorted[index + 1];
+    setPlayingId((current) => (current === id ? (next ? next.id : null) : current));
   }
 
   function goPrev() {
@@ -95,6 +116,7 @@ export default function TrackList({ tracks }: { tracks: TrackWithViews[] }) {
           viewCount={playingTrack.viewCount}
           repeat={repeat}
           onEnded={() => handleEnded(playingTrack.id)}
+          onError={() => handleError(playingTrack.id)}
           onClose={() => setPlayingId(null)}
         />
       )}

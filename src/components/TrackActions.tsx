@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { siteConfig } from "@/lib/config";
-import { shareLink, shareTrackStory, shortVideoUrl, siteTrackUrl } from "@/lib/share";
+import { prepareTrackStory, shareTrackStory, shortVideoUrl } from "@/lib/share";
 import type { UploadedVideo } from "@/lib/youtube";
 
 type Props = {
@@ -11,11 +11,13 @@ type Props = {
 
 function IconButton({
   onClick,
+  disabled,
   href,
   label,
   children,
 }: {
   onClick?: () => void;
+  disabled?: boolean;
   href?: string;
   label: string;
   children: ReactNode;
@@ -32,41 +34,41 @@ function IconButton({
   }
 
   return (
-    <button type="button" onClick={onClick} className={className} aria-label={label} title={label}>
+    <button type="button" onClick={onClick} disabled={disabled} className={`${className} disabled:opacity-60`} aria-label={label} title={label}>
       {children}
     </button>
   );
 }
 
-/** Rangée d'actions (J'aime / Partager / Story) partagée entre le panneau
- * "en cours de lecture" et la page individuelle d'un morceau. */
+const FEEDBACK_MS = 3000;
+
+/** Rangée d'actions (J'aime / Story) partagée entre le panneau "en cours de
+ * lecture" et la page individuelle d'un morceau. */
 export default function TrackActions({ video }: Props) {
-  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [storyFeedback, setStoryFeedback] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const watchUrl = shortVideoUrl(video.id);
 
-  async function handleShare() {
-    const result = await shareLink(
-      {
-        title: video.title,
-        text: `🎧 ${video.title} — musique composée par IA. Écoute-la sur ${siteConfig.name} :`,
-        url: siteTrackUrl(video.id),
-      },
-      "track_share",
-    );
-    if (result === "copied") {
-      setShareFeedback("Copié !");
-      setTimeout(() => setShareFeedback(null), 2000);
-    }
-  }
+  // Prépare l'image dès l'affichage pour que le partage parte instantanément
+  // au clic (le geste utilisateur reste valable pour la feuille de partage).
+  useEffect(() => {
+    void prepareTrackStory(video, siteConfig);
+  }, [video]);
 
   async function handleStory() {
+    if (busy) return;
+    setBusy(true);
     setStoryFeedback("…");
-    const result = await shareTrackStory(video, siteConfig);
-    setStoryFeedback(result === "downloaded" ? "Téléchargé" : result === "failed" ? "Échec" : null);
-    if (result !== "shared") {
-      setTimeout(() => setStoryFeedback(null), 2000);
-    }
+    const { outcome, linkCopied } = await shareTrackStory(video, siteConfig);
+    setBusy(false);
+    const messages: Record<typeof outcome, string | null> = {
+      shared: linkCopied ? "Lien copié : colle-le en sticker" : null,
+      cancelled: null,
+      downloaded: linkCopied ? "Image téléchargée, lien copié" : "Image téléchargée",
+      failed: "Échec",
+    };
+    setStoryFeedback(messages[outcome]);
+    if (messages[outcome]) setTimeout(() => setStoryFeedback(null), FEEDBACK_MS);
   }
 
   return (
@@ -77,18 +79,12 @@ export default function TrackActions({ video }: Props) {
         </svg>
         <span className="text-xs">J&apos;aime</span>
       </IconButton>
-      <IconButton onClick={handleShare} label="Partager ce morceau">
-        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
-          <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L7.04 9.81A2.99 2.99 0 0 0 5 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 3.92-2.92z" />
-        </svg>
-        <span className="text-xs">{shareFeedback ?? "Partager"}</span>
-      </IconButton>
-      <IconButton onClick={handleStory} label="Partager en story">
+      <IconButton onClick={handleStory} disabled={busy} label="Partager en story">
         <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
           <rect x="5" y="2" width="14" height="20" rx="3" strokeWidth="1.6" className="fill-none stroke-current" />
           <circle cx="12" cy="18" r="1.3" />
         </svg>
-        <span className="text-xs">{storyFeedback ?? "Story"}</span>
+        <span className="text-xs" aria-live="polite">{storyFeedback ?? "Partager en story"}</span>
       </IconButton>
     </div>
   );
