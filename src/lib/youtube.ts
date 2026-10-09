@@ -38,6 +38,69 @@ function uploadsPlaylistId(channelId: string): string {
 }
 
 /**
+ * Playlist (non documentée mais stable) ne contenant que les Shorts d'une
+ * chaîne : préfixe "UUSH" à la place de "UC". Seul moyen fiable de les
+ * repérer depuis que les Shorts peuvent durer jusqu'à 3 minutes — un
+ * critère de durée exclurait aussi de vrais morceaux courts.
+ */
+function shortsPlaylistId(channelId: string): string {
+  return `UUSH${channelId.slice(2)}`;
+}
+
+/**
+ * IDs des Shorts de la chaîne. Ensemble vide si la chaîne n'en a aucun
+ * (playlist inexistante → 404) ; `null` si l'appel échoue, pour que
+ * l'appelant se rabatte sur le critère de durée.
+ */
+export async function getChannelShortIds(): Promise<Set<string> | null> {
+  if (!isConfigured()) return null;
+
+  const ids = new Set<string>();
+  let pageToken: string | undefined;
+  try {
+    // Pagination plafonnée (4 × 50) pour borner le quota API.
+    for (let page = 0; page < 4; page++) {
+      const url = new URL(`${API_BASE}/playlistItems`);
+      url.searchParams.set("part", "contentDetails");
+      url.searchParams.set("playlistId", shortsPlaylistId(siteConfig.youtubeChannelId));
+      url.searchParams.set("maxResults", "50");
+      url.searchParams.set("key", process.env.YOUTUBE_API_KEY!);
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+      const res = await fetch(url, {
+        next: { revalidate: 600 },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.status === 404) return ids;
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      for (const item of data.items ?? []) {
+        const id = item.contentDetails?.videoId;
+        if (typeof id === "string") ids.add(id);
+      }
+      pageToken = data.nextPageToken;
+      if (!pageToken) break;
+    }
+    return ids;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Vrai si la vidéo est un Short : appartenance à la playlist des Shorts
+ * quand elle est connue, sinon repli sur la durée (≤ 60 s).
+ */
+export function isShort(
+  videoId: string,
+  durationSeconds: number,
+  shortIds: Set<string> | null,
+): boolean {
+  return shortIds?.has(videoId) || isShortDuration(durationSeconds);
+}
+
+/**
  * Récupère les statistiques de la chaîne (abonnés, vues totales, nb vidéos).
  * Renvoie `null` si la clé API / l'ID de chaîne ne sont pas configurés, ou
  * si l'appel échoue, pour ne jamais casser le rendu de la page.

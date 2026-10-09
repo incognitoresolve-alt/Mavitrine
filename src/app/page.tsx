@@ -8,7 +8,8 @@ import {
   getChannelStats,
   getChannelUploads,
   getVideoStats,
-  isShortDuration,
+  getChannelShortIds,
+  isShort,
 } from "@/lib/youtube";
 
 // Rendu à chaque requête plutôt que figé au moment du build : les secrets
@@ -18,7 +19,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const allUploads = await getChannelUploads();
+  const [allUploads, shortIds] = await Promise.all([getChannelUploads(), getChannelShortIds()]);
   const [channelStats, videoStats] = await Promise.all([
     getChannelStats(),
     getVideoStats(allUploads.map((v) => v.id)),
@@ -26,7 +27,7 @@ export default async function Home() {
 
   // Les Shorts ne sont pas des morceaux complets : on ne les affiche pas.
   const uploads = allUploads.filter(
-    (v) => !isShortDuration(videoStats.get(v.id)?.durationSeconds ?? 0),
+    (v) => !isShort(v.id, videoStats.get(v.id)?.durationSeconds ?? 0, shortIds),
   );
 
   const handle = siteConfig.youtubeChannelUrl.replace(/^https?:\/\/(www\.)?/, "");

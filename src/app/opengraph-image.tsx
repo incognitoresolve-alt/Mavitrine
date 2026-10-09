@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { siteConfig } from "@/lib/config";
 import { formatCompact } from "@/lib/format";
-import { getChannelStats, getChannelUploads } from "@/lib/youtube";
+import { getChannelShortIds, getChannelStats, getChannelUploads, isShort } from "@/lib/youtube";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -31,7 +31,13 @@ async function fetchCover(videoId: string): Promise<string | null> {
 
 async function loadData() {
   try {
-    const [uploads, stats] = await Promise.all([getChannelUploads(12), getChannelStats()]);
+    const [allUploads, shortIds, stats] = await Promise.all([
+      getChannelUploads(),
+      getChannelShortIds(),
+      getChannelStats(),
+    ]);
+    // Shorts exclus (durée inconnue ici : seule la playlist des Shorts compte).
+    const uploads = allUploads.filter((v) => !isShort(v.id, 0, shortIds));
     // Marge de candidats au cas où certaines vignettes seraient indisponibles.
     const ids = uploads.slice(0, COVER_COUNT * 2).map((v) => v.id);
     const covers = (await Promise.all(ids.map(fetchCover)))
