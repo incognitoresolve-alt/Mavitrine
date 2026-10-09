@@ -7,7 +7,7 @@ import TrackGridItem from "@/components/TrackGridItem";
 import type { UploadedVideo } from "@/lib/youtube";
 import { loadYouTubeIframeApi } from "@/lib/youtubePlayer";
 
-type TrackWithViews = UploadedVideo & { viewCount: number | null };
+type TrackWithViews = UploadedVideo & { viewCount: number | null; isNew?: boolean };
 type SortKey = "recent" | "views" | "alpha";
 
 const SORT_LABELS: Record<SortKey, string> = {
@@ -127,6 +127,7 @@ export default function TrackList({ tracks }: { tracks: TrackWithViews[] }) {
             <TrackGridItem
               video={track}
               viewCount={track.viewCount}
+              isNew={track.isNew ?? false}
               active={playingId === track.id}
               onSelect={() => selectTrack(track.id)}
             />

@@ -262,8 +262,11 @@ export type StoryShareResult = {
  * Partage l'image "story" d'un morceau via la feuille de partage native
  * (Instagram/Snapchat/WhatsApp Story sur mobile).
  *
- * - Seul le fichier est partagé : Instagram et d'autres apps ignorent ou
- *   refusent un partage qui mélange image + texte/lien.
+ * - Le lien du morceau accompagne l'image dans `text` (repris tel quel par
+ *   WhatsApp, Messenger, Telegram…). Pas de champ `url` : sur iOS, sa
+ *   présence fait partager le lien à la place de l'image à certaines apps.
+ * - Instagram/Snapchat ne reprennent jamais ce texte dans une story : le
+ *   lien est aussi imprimé sur l'image et copié dans le presse-papiers.
  * - Le lien (avec instant de départ et UTM) est copié dans le presse-papiers
  *   juste avant, pour être collé en sticker "Lien" dans la story.
  * - Sans partage de fichiers (desktop), l'image est téléchargée.
@@ -281,7 +284,9 @@ export async function shareTrackStory(
 
   if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: video.title });
+      const withText = { files: [file], title: video.title, text: `🎧 ${video.title} — ${url}` };
+      // Repli fichier seul si une plateforme refuse le combo image + texte.
+      await navigator.share(navigator.canShare(withText) ? withText : { files: [file], title: video.title });
       return { outcome: "shared", linkCopied };
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
