@@ -2,6 +2,7 @@
 
 import { formatCompact } from "@/lib/format";
 import type { UploadedVideo } from "@/lib/youtube";
+import { loadYouTubeIframeApi } from "@/lib/youtubePlayer";
 
 type Props = {
   video: UploadedVideo;
@@ -17,6 +18,10 @@ export default function TrackGridItem({ video, viewCount, active, onSelect }: Pr
     <button
       type="button"
       onClick={onSelect}
+      // Intention de lecture : précharge l'API YouTube avant le clic.
+      onPointerEnter={() => void loadYouTubeIframeApi()}
+      onTouchStart={() => void loadYouTubeIframeApi()}
+      onFocus={() => void loadYouTubeIframeApi()}
       aria-label={`Lire ${video.title}`}
       aria-pressed={active}
       className="group relative aspect-square w-full overflow-hidden bg-black"

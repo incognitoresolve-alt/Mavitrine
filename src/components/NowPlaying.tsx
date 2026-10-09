@@ -11,10 +11,11 @@ type Props = {
   viewCount: number | null;
   repeat: boolean;
   onEnded?: () => void;
+  onError?: () => void;
   onClose: () => void;
 };
 
-export default function NowPlaying({ video, viewCount, repeat, onEnded, onClose }: Props) {
+export default function NowPlaying({ video, viewCount, repeat, onEnded, onError, onClose }: Props) {
   const watchUrl = shortVideoUrl(video.id);
 
   return (
@@ -22,7 +23,7 @@ export default function NowPlaying({ video, viewCount, repeat, onEnded, onClose 
       id="now-playing"
       className="mb-6 scroll-mt-4 overflow-hidden rounded-2xl border border-line bg-surface"
     >
-      <YouTubeEmbed key={video.id} videoId={video.id} title={video.title} repeat={repeat} onEnded={onEnded}>
+      <YouTubeEmbed videoId={video.id} title={video.title} repeat={repeat} onEnded={onEnded} onError={onError}>
         <button
           type="button"
           onClick={onClose}
