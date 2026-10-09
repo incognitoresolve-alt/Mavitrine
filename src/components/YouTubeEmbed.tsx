@@ -24,6 +24,9 @@ const READY_TIMEOUT_MS = 7000;
 // le navigateur a bloqué l'autoplay sonore et de basculer en muet.
 const AUTOPLAY_SOUND_CHECK_MS = 1500;
 
+// Volume par défaut (0-100) appliqué dès que le son est actif.
+const DEFAULT_VOLUME = 10;
+
 /**
  * Lecteur YouTube embarqué : tente de démarrer avec le son (le clic de
  * l'utilisateur qui a sélectionné ce morceau sert de geste autorisant
@@ -59,6 +62,7 @@ export default function YouTubeEmbed({
   const [status, setStatus] = useState<"loading" | "ready" | "timeout">("loading");
   const [muted, setMuted] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
+  const enableSoundRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -78,6 +82,18 @@ export default function YouTubeEmbed({
   useEffect(() => {
     let cancelled = false;
     let player: YouTubePlayer | null = null;
+    let removeGestureListeners = () => {};
+
+    function enableSound() {
+      removeGestureListeners();
+      const p = playerRef.current;
+      if (!p) return;
+      p.setVolume(DEFAULT_VOLUME);
+      p.unMute();
+      p.playVideo();
+      setMuted(false);
+    }
+    enableSoundRef.current = enableSound;
 
     loadYouTubeIframeApi().then(() => {
       if (cancelled || !window.YT) return;
@@ -86,6 +102,8 @@ export default function YouTubeEmbed({
           onReady: (event) => {
             if (cancelled) return;
             playerRef.current = event.target;
+            event.target.setVolume(DEFAULT_VOLUME);
+            event.target.unMute();
             // Lecture déclenchée explicitement (plutôt que de compter
             // uniquement sur `autoplay=1` dans l'URL) : plus fiable dans les
             // navigateurs intégrés qui bloquent souvent l'autoplay déclenché
@@ -104,6 +122,18 @@ export default function YouTubeEmbed({
                 playerRef.current?.mute();
                 playerRef.current?.playVideo();
                 setMuted(true);
+                // Réactivation automatique au prochain geste (tap/clic/touche)
+                // n'importe où sur la page : ce geste autorise le son.
+                const restore = () => {
+                  if (cancelled) return;
+                  enableSound();
+                };
+                document.addEventListener("pointerdown", restore, { once: true, capture: true });
+                document.addEventListener("keydown", restore, { once: true, capture: true });
+                removeGestureListeners = () => {
+                  document.removeEventListener("pointerdown", restore, { capture: true });
+                  document.removeEventListener("keydown", restore, { capture: true });
+                };
               }
             }, AUTOPLAY_SOUND_CHECK_MS);
           },
@@ -123,15 +153,15 @@ export default function YouTubeEmbed({
 
     return () => {
       cancelled = true;
+      removeGestureListeners();
+      enableSoundRef.current = () => {};
       playerRef.current = null;
       player?.destroy();
     };
   }, [videoId, iframeId]);
 
   function handleUnmute() {
-    playerRef.current?.unMute();
-    playerRef.current?.playVideo();
-    setMuted(false);
+    enableSoundRef.current();
   }
 
   return (

@@ -4,6 +4,7 @@ export type YouTubePlayer = {
   playVideo: () => void;
   unMute: () => void;
   mute: () => void;
+  setVolume: (volume: number) => void;
   isMuted: () => boolean;
   getPlayerState: () => number;
 };
