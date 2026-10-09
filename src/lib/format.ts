@@ -22,3 +22,11 @@ const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
 export function formatDate(iso: string): string {
   return dateFormatter.format(new Date(iso));
 }
+
+const NEW_TRACK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Morceau publié depuis moins de 7 jours (badge "Nouveau"). */
+export function isRecent(iso: string, now: number = Date.now()): boolean {
+  const published = new Date(iso).getTime();
+  return Number.isFinite(published) && now - published < NEW_TRACK_MS;
+}

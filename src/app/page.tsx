@@ -3,6 +3,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import TrackDropdownNav from "@/components/TrackDropdownNav";
 import TrackList from "@/components/TrackList";
 import { siteConfig } from "@/lib/config";
+import { isRecent } from "@/lib/format";
 import {
   getChannelStats,
   getChannelUploads,
@@ -159,6 +160,7 @@ export default async function Home() {
               tracks={uploads.map((video) => ({
                 ...video,
                 viewCount: videoStats.get(video.id)?.viewCount ?? null,
+                isNew: isRecent(video.publishedAt),
               }))}
             />
           </div>
